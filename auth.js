@@ -12,9 +12,9 @@
  * so the password can't be read out of this file, and 150k iterations makes
  * guessing it slow.
  *
- * To change the password, open the page, unlock it, and click "Change password"
- * on the lock screen (or run setPassword() from the console). It prints a new
- * hash — paste that over PASSWORD_HASH below.
+ * To change the password, unlock the page and click "Change password" on the
+ * lock screen (or run setPassword() from the console). It prints a new hash —
+ * paste that over PASSWORD_HASH below.
  */
 (function () {
   "use strict";
@@ -23,16 +23,14 @@
   const ITERATIONS = 150000;
   const PASSWORD_HASH = "4301913239fd1df7d953bf59d3918abf24943087e5b508a58bf609d9202fd276"; // "icpc2026"
   const SESSION_KEY = "icpc_unlocked";
+  const IDLE_KEY = "icpc_autolock_min";
 
   const root = document.documentElement;
   root.classList.add("locked");
 
-  function unlock() {
-    root.classList.remove("locked");
-    const gate = document.getElementById("lockScreen");
-    if (gate) gate.remove();
-  }
+  let idleTimer = null;
 
+  // ---------- crypto ----------
   async function derive(password) {
     const enc = new TextEncoder();
     const material = await crypto.subtle.importKey(
@@ -51,15 +49,60 @@
     return diff === 0;
   }
 
-  // Already unlocked this tab? Then don't ask again.
-  try {
-    if (sessionStorage.getItem(SESSION_KEY) === PASSWORD_HASH) {
-      unlock();
-      return;
-    }
-  } catch (e) { /* sessionStorage unavailable — fall through and ask */ }
+  // ---------- lock / unlock ----------
+  function unlock() {
+    root.classList.remove("locked");
+    const gate = document.getElementById("lockScreen");
+    if (gate) gate.remove();
+    const btn = document.getElementById("lockToggle");
+    if (btn) btn.hidden = false;
+    resetIdleTimer();
+  }
 
+  function lock() {
+    try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+    root.classList.add("locked");
+    const btn = document.getElementById("lockToggle");
+    if (btn) btn.hidden = true;
+    clearTimeout(idleTimer);
+    buildGate();
+    const input = document.getElementById("lockInput");
+    if (input) { input.value = ""; input.focus(); }
+    window.scrollTo(0, 0);
+  }
+
+  function isUnlocked() {
+    try { return sessionStorage.getItem(SESSION_KEY) === PASSWORD_HASH; }
+    catch (e) { return false; }
+  }
+
+  // Reveal synchronously (before <body> parses) when this tab is already
+  // unlocked, otherwise the page would flash blank until DOMContentLoaded.
+  if (isUnlocked()) root.classList.remove("locked");
+
+  // ---------- optional auto-lock on idle ----------
+  function idleMinutes() {
+    const v = parseInt(localStorage.getItem(IDLE_KEY) || "0", 10);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }
+
+  function resetIdleTimer() {
+    clearTimeout(idleTimer);
+    const mins = idleMinutes();
+    if (!mins || root.classList.contains("locked")) return;
+    idleTimer = setTimeout(lock, mins * 60000);
+  }
+
+  ["mousemove", "keydown", "click", "scroll", "touchstart"].forEach(ev =>
+    window.addEventListener(ev, () => {
+      if (!root.classList.contains("locked")) resetIdleTimer();
+    }, { passive: true }));
+
+  // ---------- gate ----------
   function buildGate() {
+    if (document.getElementById("lockScreen")) return;
+    if (!document.body) return;
+
     const gate = document.createElement("div");
     gate.id = "lockScreen";
     gate.innerHTML =
@@ -119,16 +162,29 @@
     });
   }
 
-  // Expose the generator so a new hash can be made from the console too.
+  // Generate a hash from the console too.
   window.setPassword = async function (pw) {
     const hash = await derive(pw);
     console.log("PASSWORD_HASH = \"" + hash + "\";  // " + pw);
     return hash;
   };
+  // Lock from the console / other scripts.
+  window.lockSite = lock;
+
+  // ---------- boot ----------
+  function start() {
+    const btn = document.getElementById("lockToggle");
+    if (btn && !btn.dataset.wired) {
+      btn.dataset.wired = "1";
+      btn.addEventListener("click", lock);
+    }
+    if (isUnlocked()) unlock();
+    else buildGate();
+  }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", buildGate);
+    document.addEventListener("DOMContentLoaded", start);
   } else {
-    buildGate();
+    start();
   }
 })();

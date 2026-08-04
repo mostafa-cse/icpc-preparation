@@ -823,15 +823,15 @@
   .lock-link:hover { color: var(--accent-ink); }
 
   /* ---------- Theme toggle ---------- */
-  .theme-btn {
+  .theme-btn, .icon-btn {
     display: inline-grid; place-items: center; width: 2.3rem; height: 2.3rem;
     background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md);
     font-size: 0.95rem; line-height: 1; cursor: pointer;
     transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease),
                 transform var(--t-fast) var(--ease);
   }
-  .theme-btn:hover { border-color: var(--accent); background: var(--surface); }
-  .theme-btn:active { transform: translateY(1px); }
+  .theme-btn:hover, .icon-btn:hover { border-color: var(--accent); background: var(--surface); }
+  .theme-btn:active, .icon-btn:active { transform: translateY(1px); }
 
   /* ---------- Panel entrance ---------- */
   .panel.active { animation: nb-fade var(--t-med) var(--ease); }
@@ -859,4 +859,5 @@
   @media (max-width: 760px) {
     /* tabs take the full row on mobile, so dock the toggle to the header corner */
     .theme-btn { position: absolute; top: 0.95rem; right: 0; }
+    .icon-btn { position: absolute; top: 0.95rem; right: 2.7rem; }
   }

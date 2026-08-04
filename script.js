@@ -86,9 +86,17 @@
   });
 
   // ---------- State ----------
+  // localStorage is only an offline mirror; the account's rows in Supabase are
+  // the source of truth. account.js swaps this out on sign-in / sign-out.
+  const CACHE_KEY = "icpc_solved";
   let solved = new Set();
-  try { solved = new Set(JSON.parse(localStorage.getItem("icpc_solved") || "[]")); } catch (e) {}
-  function persist() { localStorage.setItem("icpc_solved", JSON.stringify([...solved])); }
+  try { solved = new Set(JSON.parse(localStorage.getItem(CACHE_KEY) || "[]")); } catch (e) {}
+  function persistLocal() { localStorage.setItem(CACHE_KEY, JSON.stringify([...solved])); }
+  function persist() {
+    persistLocal();
+    const sync = window.ICPCProgress && window.ICPCProgress.onChange;
+    if (typeof sync === "function") sync([...solved]);
+  }
 
   let filters = { text: "", file: "", phase: "", hideSolved: false, deepOnly: false };
 
@@ -470,6 +478,38 @@
     });
     todayStrip.appendChild(jumpBtn);
   }
+
+  // ---------- Progress API (consumed by account.js for Supabase sync) ----------
+  window.ICPCProgress = Object.assign(window.ICPCProgress || {}, {
+    snapshot: () => [...solved],
+    total: () => allIds.size,
+    // Replace local state from the server without echoing back a write.
+    replaceAll(ids) {
+      solved = new Set(ids || []);
+      persistLocal();
+      refreshAllChipVisuals();
+      refreshCounters();
+    },
+    clearLocal() {
+      solved = new Set();
+      try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
+      refreshAllChipVisuals();
+      refreshCounters();
+    },
+    // Per-block and per-file counts, for the profile page.
+    breakdown() {
+      return {
+        phases: PHASES.map(p => ({
+          id: p.id, name: p.name, weeks: p.weeks,
+          done: countSet(byPhaseIds[p.id]), total: byPhaseIds[p.id].size,
+        })),
+        files: FILES.map(f => ({
+          name: f.replace(".md", ""),
+          done: countSet(byFileIds[f]), total: byFileIds[f].size,
+        })),
+      };
+    },
+  });
 
   // ---------- Init ----------
   document.getElementById("statTotalInline").textContent = allIds.size.toLocaleString();

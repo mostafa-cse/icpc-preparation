@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ICPC Final Sprint — 16-Week Training Program</title>
 <link rel="stylesheet" href="styles.css">
-<script src="auth.js"></script>
 <script src="theme.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" crossorigin="anonymous"></script>
+<script src="supabase-config.js"></script>
 </head>
 <body>
 
@@ -24,10 +25,9 @@
       <button class="tab" data-tab="checklist" type="button">Checklist</button>
       <button class="tab" data-tab="templates" type="button">Templates</button>
       <button class="tab" data-tab="contests" type="button">Contests</button>
+      <button class="tab" data-tab="profile" type="button">Profile</button>
     </nav>
-    <button class="icon-btn" id="lockToggle" type="button" hidden
-            title="Lock the tracker — the password is needed to get back in"
-            aria-label="Lock the tracker">🔒</button>
+    <div class="account-bar" id="accountBar"></div>
     <div class="today-strip" id="todayStrip"></div>
   </header>
 
@@ -258,6 +258,11 @@
       <p class="contest-status" id="contestStatus">Open this tab to load contests.</p>
       <div id="contestList"></div>
     </section>
+
+    <!-- ======================= PROFILE PANEL ======================= -->
+    <section id="panel-profile" class="panel">
+      <div id="profileBody"></div>
+    </section>
   </main>
 
   <footer class="app-footer">
@@ -271,5 +276,6 @@
 <script src="script.js"></script>
 <script src="templates.js"></script>
 <script src="contests.js"></script>
+<script src="account.js"></script>
 </body>
 </html>

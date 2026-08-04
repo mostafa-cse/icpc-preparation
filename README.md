@@ -21,15 +21,35 @@ python3 -m http.server 8000
 Serving over `http://` is preferred: opening via `file://` makes browsers block
 the contest API requests as cross-origin.
 
-## Access
+## Accounts and data (Supabase)
 
-The page is behind a password gate (`auth.js`). Only a PBKDF2-SHA256 derivation
-of the password is stored, never the password itself. Change it with the
-"Change password" link on the lock screen, which prints a hash to paste over
-`PASSWORD_HASH`.
+Sign-in is required. Each account's solved problems live in Supabase, so
+progress follows you across devices. **Profile** shows totals, per-block and
+per-source-file breakdowns, and sign-out.
 
-Note this is a deterrent, not real security: on a static site anyone can fetch
-`script.js` and the other files directly, so don't put anything sensitive here.
+Set it up once:
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. **SQL Editor -> New query** -> paste `supabase-schema.sql` -> **Run**. That
+   creates `profiles` and `solved_problems`, switches on Row Level Security so
+   each user can only touch their own rows, and adds a trigger that creates a
+   profile row on signup.
+3. **Project Settings -> API** -> copy the **Project URL** and the **anon
+   public** key into `supabase-config.js`.
+
+The anon key is meant to ship in the browser — RLS is what protects the data.
+Never put the `service_role` key there; it bypasses RLS.
+
+If email confirmation is on (the Supabase default), new accounts must click the
+link in their inbox before signing in. Turn it off under
+**Authentication -> Providers -> Email** for instant signup.
+
+With `supabase-config.js` left blank the app runs in **offline mode**: the
+tracker works and progress is kept in this browser, but there are no accounts
+and nothing syncs.
+
+Note the gate protects *data*, not *source*: on a static site anyone can fetch
+`script.js` and the rest directly, so don't put secrets in this folder.
 
 ## Printing the notebook
 

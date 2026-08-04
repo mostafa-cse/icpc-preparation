@@ -436,6 +436,18 @@
   }
   document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => activateTab(t.dataset.tab)));
 
+  // Footer links jump to a tab rather than being decorative.
+  document.querySelectorAll("[data-goto-tab]").forEach(el => {
+    el.addEventListener("click", e => {
+      e.preventDefault();
+      activateTab(el.dataset.gotoTab);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
+
+  const yearEl = document.getElementById("footYear");
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
   // ---------- Today strip ----------
   const todayStrip = document.getElementById("todayStrip");
   let startDateInput;

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ICPC Final Sprint — 16-Week Training Program</title>
+<link rel="stylesheet" href="styles.css">
+<script src="auth.js"></script>
+<script src="theme.js"></script>
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">🏁</span>
+      <div class="brand-text">
+        <p class="eyebrow">Final-Sprint Training Program</p>
+        <h1>ICPC · 16-Week Plan</h1>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="routine" type="button">Routine</button>
+      <button class="tab" data-tab="checklist" type="button">Checklist</button>
+      <button class="tab" data-tab="templates" type="button">Templates</button>
+      <button class="tab" data-tab="contests" type="button">Contests</button>
+    </nav>
+    <div class="today-strip" id="todayStrip"></div>
+  </header>
+
+  <main>
+    <!-- ======================= ROUTINE PANEL ======================= -->
+    <section id="panel-routine" class="panel active">
+      <div class="doc-col">
+        <p class="lede">Five source files, <strong id="statTotalInline">4,427</strong> unique problems, one goal: walk into your ICPC contest having drilled every core pattern in this set at least once. This is a full-time program — 12–14 hours a day, 16 weeks, structured so the hardest, highest-yield topics get the most runway.</p>
+
+        <div class="stat-row">
+          <div class="stat"><span class="num">16</span><span class="label">Weeks</span></div>
+          <div class="stat"><span class="num">10</span><span class="label">Training blocks</span></div>
+          <div class="stat"><span class="num">5</span><span class="label">Source files</span></div>
+          <div class="stat"><span class="num">4,427</span><span class="label">Unique problems</span></div>
+          <div class="stat"><span class="num">4</span><span class="label">Contest platforms</span></div>
+        </div>
+
+        <div class="callout">
+          <strong>On "solve all of them":</strong> at 12–14 hrs/day this program gives you roughly 950–1,050 hours of pure curriculum time once contests, upsolving, and review are subtracted. Clearing every single one of the 4,427 problems in 16 weeks is the stretch goal, not a promise — nobody's done it on this pace and kept their sanity. Work each block's checklist top to bottom, favor <span class="mono">Easy/Normal</span>-tagged and non-flagged items first, and treat anything marked <strong>stretch</strong> (deep-cut structures, or <span class="mono">Very Hard</span>/<span class="mono">Insane</span>) as background filler you chip away at for the rest of the program — including after week 16, since the tracker keeps counting.
+        </div>
+      </div>
+
+      <section class="doc-section">
+        <h2>Daily Rhythm</h2>
+        <p>Two templates. Which one you run depends on whether a contest lands that day — see the calendar below. Both assume a 12–14 hr day; times shift to fit your own clock, the block structure is what matters.</p>
+        <div class="sched-grid">
+          <div class="sched-card">
+            <h4>Grind Day</h4>
+            <div class="sub">Mon · Tue · Thu (unless Codeforces lands)</div>
+            <div class="sched-row"><span class="sched-time">+0:00–0:30</span><div class="sched-what"><strong>Warm-up</strong><span>1–2 easy, already-comfortable problems. 15-min hard cap each — just get your hands moving.</span></div></div>
+            <div class="sched-row"><span class="sched-time">+0:30–2:30</span><div class="sched-what"><strong>Theory block</strong><span>Read the day's sub-topic, extend your own template/snippet library for it.</span></div></div>
+            <div class="sched-row"><span class="sched-time">+2:45–6:15</span><div class="sched-what"><strong>Problem block A + B</strong><span>Work today's checklist section top to bottom: easy → normal → hard tier, lunch in the middle.</span></div></div>
+            <div class="sched-row"><span class="sched-time">+6:30–8:30</span><div class="sched-what"><strong>Upsolve / backlog</strong><span>Anything unsolved from yesterday, or stuck &gt;45 min today. Editorial's allowed now — read it, close it, re-implement from a blank file.</span></div></div>
+            <div class="sched-row"><span class="sched-time">+9:00–10:00</span><div class="sched-what"><strong>Review &amp; log</strong><span>Update the tracker, write 2–3 lines on what tripped you up, flag anything to revisit in a week.</span></div></div>
+          </div>
+          <div class="sched-card">
+            <h4>Contest Day</h4>
+            <div class="sub">Whichever day the platform lands on — see calendar</div>
+            <div class="sched-row"><span class="sched-time">+0:00–0:30</span><div class="sched-what"><strong>Warm-up</strong><span>Same as grind day.</span></div></div>
+            <div class="sched-row"><span class="sched-time">+0:30–6:00</span><div class="sched-what"><strong>Problem blocks</strong><span>Curriculum work, same topic as the week's focus block, lunch in the middle.</span></div></div>
+            <div class="sched-row"><span class="sched-time">+6:00–6:30</span><div class="sched-what"><strong>Pre-contest reset</strong><span>Skim your template library, stretch, no new topics.</span></div></div>
+            <div class="sched-row"><span class="sched-time">contest window</span><div class="sched-what"><strong>Live contest</strong><span>Full focus, no outside help. Treat every minute like the real thing — this is where speed under pressure gets built.</span></div></div>
+            <div class="sched-row"><span class="sched-time">+2:00 after</span><div class="sched-what"><strong>Immediate upsolve</strong><span>Finish what you didn't solve live. Editorial only after your own honest attempt.</span></div></div>
+            <div class="sched-row"><span class="sched-time">+0:30</span><div class="sched-what"><strong>Log result</strong><span>Rank/rating in one line, so you can see the trend over 16 weeks.</span></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="doc-section">
+        <h2>Weekly Contest Calendar</h2>
+        <p>Codeforces has no fixed day — it averages 2–3 rounds/week but the schedule genuinely varies, so check <span class="mono">codeforces.com/contests</span> every Monday and slot whatever lands into that day's grind slot. CodeChef, AtCoder and LeetCode run on fixed weekly schedules — set those into your calendar once.</p>
+        <div class="cal-wrap">
+          <table class="cal">
+            <thead><tr><th>Day</th><th>What's on</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td class="day">Monday</td><td class="what">— grind day —</td><td class="notes">Pure curriculum. No fixed contest.</td></tr>
+              <tr><td class="day">Tuesday</td><td class="what"><span class="plat-badge">CF</span>check calendar</td><td class="notes">Codeforces has no fixed day — check and slot in if one lands.</td></tr>
+              <tr><td class="day">Wednesday</td><td class="what"><span class="plat-badge">CC</span>CodeChef Starters</td><td class="notes">Weekly, fixed day, ~20:00 IST, ~3 hours.</td></tr>
+              <tr><td class="day">Thursday</td><td class="what"><span class="plat-badge">CF</span>check calendar</td><td class="notes">Same as Tuesday.</td></tr>
+              <tr><td class="day">Friday</td><td class="what"><span class="plat-badge">CF</span>check calendar</td><td class="notes">Educational/Div rounds land here often historically, but not guaranteed.</td></tr>
+              <tr><td class="day">Saturday</td><td class="what"><span class="plat-badge">AC</span>AtCoder Beginner Contest<br><span class="plat-badge">LC</span>Biweekly (alternate weeks)</td><td class="notes">ABC: weekly, fixed, 21:00 JST. LeetCode Biweekly: every other Saturday, 14:30 UTC.</td></tr>
+              <tr><td class="day">Sunday</td><td class="what"><span class="plat-badge">LC</span>LeetCode Weekly<br><span class="plat-badge">MOCK</span>ICPC mock (from wk.5, biweekly)</td><td class="notes">LC Weekly: 02:30 UTC — convert to local, this can land Saturday night depending on timezone. Full 5h ICPC-style mock via Codeforces Gym / vjudge every other Sunday from Week 5, then most days in Weeks 15–16.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:0.85rem">Convert the fixed platforms' times to your own timezone once and put them straight into your calendar app. Only Codeforces needs a weekly re-check.</p>
+      </section>
+
+      <section class="doc-section">
+        <h2>The 10 Training Blocks</h2>
+        <p>Each block names its primary sources from the five files. Progress bars below pull live from your checklist. Jump straight to a block's problems with the button on the right.</p>
+        <div class="block-list" id="blockList"></div>
+      </section>
+
+      <section class="doc-section">
+        <h2>Ground Rules</h2>
+        <ul>
+          <li><strong>Time-box in training, not in contests.</strong> Cap yourself at 45–60 min on a problem before taking a hint during grind blocks. During live contests, sit through the whole thing — no early peeking, that's the muscle you're building.</li>
+          <li><strong>Upsolve same day, every time.</strong> A problem you finish two days later barely counts — the value is in closing the loop while the contest is still fresh.</li>
+          <li><strong>Keep an error log.</strong> The 2–3 line note at the end of each grind day matters more than it feels like it does. Recurring mistakes are worth more than new problems solved.</li>
+          <li><strong>One rest half-day every two weeks, non-negotiable.</strong> This is a marathon, not a sprint — burnout in month three costs more than the half-day ever will.</li>
+          <li><strong>Have teammates?</strong> This plan is written for solo pacing. Sync the mock-contest blocks (weeks 5+ and 15–16) with your team explicitly — one shared machine, rotate who's typing, practice the handoff, not just the algorithms.</li>
+        </ul>
+      </section>
+    </section>
+
+    <!-- ======================= CHECKLIST PANEL ======================= -->
+    <section id="panel-checklist" class="panel">
+      <div class="dash">
+        <div class="dash-top">
+          <div>
+            <div class="big-num" id="dashBigNum">0 / 0</div>
+            <div class="big-label">Unique problems solved</div>
+          </div>
+          <div class="bar-col">
+            <div class="bar"><i id="dashBigBar"></i></div>
+            <div class="legend">
+              <span><i style="background:var(--good)"></i>Solved</span>
+              <span><i style="background:var(--warn)"></i>Very Hard / Insane / deep-cut</span>
+              <span><i style="background:var(--good);opacity:.4"></i>Easy tier</span>
+            </div>
+          </div>
+        </div>
+        <div class="grid-tiles" id="phaseGrid"></div>
+        <div class="grid-tiles" id="fileGrid"></div>
+      </div>
+
+      <div class="filter-bar">
+        <input type="search" id="searchBox" placeholder="Search problem id, e.g. CSES-1082…" autocomplete="off">
+        <select id="fileSelect"><option value="">All files</option></select>
+        <select id="phaseSelect"><option value="">All blocks</option></select>
+        <label class="chk-label"><input type="checkbox" id="hideSolved"> Hide solved</label>
+        <label class="chk-label"><input type="checkbox" id="deepOnly"> Stretch-tier only</label>
+        <div class="btn-row">
+          <button class="btn" id="expandAllBtn" type="button">Expand all</button>
+          <button class="btn" id="collapseAllBtn" type="button">Collapse all</button>
+          <button class="btn" id="exportBtn" type="button">Export progress</button>
+          <button class="btn" id="importBtn" type="button">Import progress</button>
+          <input type="file" id="importFile" accept="application/json" style="display:none">
+          <button class="btn danger" id="resetBtn" type="button">Reset all</button>
+        </div>
+      </div>
+
+      <div id="fileAccordions"></div>
+      <p class="empty-note" id="emptyNote" style="display:none">No problems match the current filters.</p>
+    </section>
+
+    <!-- ======================= TEMPLATES PANEL ======================= -->
+    <section id="panel-templates" class="panel">
+      <div class="doc-col">
+        <p class="lede">Your onsite-contest notebook. Store a template every time you solve something worth keeping — description, complexity, and the C++ code. Export the whole library as LaTeX and compile it into a printed team notebook in the same layout as <span class="mono">notebook.pdf</span>.</p>
+        <div class="callout">
+          <strong>Printing it for real:</strong> pick <span class="mono">LaTeX (.tex)</span> below and compile with <span class="mono">pdflatex notebook.tex</span> — run it twice so the table of contents fills in. Overleaf works too: upload the <span class="mono">.tex</span> and hit Recompile. Each entry gets the notebook's <span class="mono">[N lines] - hash</span> signature, where the hash is the MD5 of the comment- and whitespace-stripped code, so at an onsite contest you can retype a template and verify you typed it correctly.
+        </div>
+      </div>
+
+      <div class="tpl-meta-bar">
+        <label>Notebook title <input type="text" id="tplMetaTitle" placeholder="ICPC Team Notebook"></label>
+        <label>Authors / team <input type="text" id="tplMetaAuthors" placeholder="Your name, teammate, teammate"></label>
+      </div>
+
+      <div class="filter-bar">
+        <input type="search" id="tplSearch" placeholder="Search title, description or code…" autocomplete="off">
+        <select id="tplCatFilter"><option value="">All sections</option></select>
+        <div class="btn-row">
+          <button class="btn primary" id="tplNewBtn" type="button">+ New template</button>
+          <select id="tplExportFmt" title="Export format">
+            <option value="tex">LaTeX (.tex)</option>
+            <option value="print">Print / Save as PDF</option>
+            <option value="md">Markdown (.md)</option>
+            <option value="cpp">Single C++ file (.cpp)</option>
+            <option value="json">JSON backup (.json)</option>
+          </select>
+          <select id="tplPrintSize" title="Base font size for Print / Save as PDF">
+            <option value="8">8 pt</option>
+            <option value="9">9 pt</option>
+            <option value="10" selected>10 pt</option>
+            <option value="11">11 pt</option>
+          </select>
+          <label class="chk-label" title="notebook.pdf shows code only — tick to also print your notes"><input type="checkbox" id="tplExportNotes"> Notes in export</label>
+          <button class="btn" id="tplExportBtn" type="button">Export</button>
+          <button class="btn" id="tplImportBtn" type="button">Import</button>
+          <input type="file" id="tplImportFile" accept="application/json" style="display:none">
+        </div>
+      </div>
+
+      <div class="tpl-editor" id="tplEditor" hidden>
+        <h3 id="tplEditorHead">New template</h3>
+        <div class="tpl-form">
+          <label class="f-title">Title <input type="text" id="tplTitle" placeholder="e.g. Segment Tree (lazy)"></label>
+          <label class="f-cat">Section <select id="tplCat"></select></label>
+          <label class="f-time">Time complexity <input type="text" id="tplTime" placeholder="O(log n) per query"></label>
+          <label class="f-space">Space complexity <input type="text" id="tplSpace" placeholder="O(n)"></label>
+          <label class="f-desc">Description <textarea id="tplDesc" rows="3" placeholder="What it does, when to reach for it, gotchas, how to adapt it."></textarea></label>
+          <label class="f-code">C++ code <textarea id="tplCode" rows="16" spellcheck="false" placeholder="struct SegmentTree { … };"></textarea></label>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="tplSaveBtn" type="button">Save template</button>
+          <button class="btn" id="tplCancelBtn" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <div class="stat-row" id="tplStats"></div>
+      <div id="tplList"></div>
+      <p class="empty-note" id="tplEmpty" style="display:none">No templates yet — hit <strong>+ New template</strong> to start your notebook.</p>
+    </section>
+
+    <!-- ======================= CONTESTS PANEL ======================= -->
+    <section id="panel-contests" class="panel">
+      <div class="doc-col">
+        <p class="lede">The next contest across the four platforms in your calendar, pulled live — just the one you need to think about today. Set a reminder to get a browser notification before it starts, or download the <span class="mono">.ics</span> to put it in your real calendar. Once it begins, the next one takes its place. Untick a platform to skip past its rounds.</p>
+        <div class="callout">
+          <strong>Which reminder to use:</strong> browser notifications only fire while this page is open, so they're for contests later the same day. For anything further out, use <strong>Calendar</strong> — the downloaded <span class="mono">.ics</span> carries its own alarm and fires whether or not this page is running.
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="plat-toggles">
+          <label class="plat-toggle"><input type="checkbox" value="cf" checked> <span class="plat-badge plat-cf">CF</span>Codeforces</label>
+          <label class="plat-toggle"><input type="checkbox" value="cc" checked> <span class="plat-badge plat-cc">CC</span>CodeChef</label>
+          <label class="plat-toggle"><input type="checkbox" value="ac" checked> <span class="plat-badge plat-ac">AC</span>AtCoder</label>
+          <label class="plat-toggle"><input type="checkbox" value="lc" checked> <span class="plat-badge plat-lc">LC</span>LeetCode</label>
+        </div>
+        <div class="btn-row">
+          <label class="chk-label">Remind me
+            <select id="contestLead">
+              <option value="10">10 min before</option>
+              <option value="30">30 min before</option>
+              <option value="60">1 hour before</option>
+              <option value="180">3 hours before</option>
+              <option value="1440">1 day before</option>
+            </select>
+          </label>
+          <button class="btn" id="contestNotifyBtn" type="button">Enable notifications</button>
+          <button class="btn" id="contestRefreshBtn" type="button">Refresh</button>
+        </div>
+      </div>
+
+      <details class="clist-box" id="clistBox">
+        <summary>Contest data source — clist.by (connected)</summary>
+        <p>AtCoder, LeetCode and CodeChef all refuse requests coming from a web page, so no site can read them directly from your browser. <a href="https://clist.by/api/v4/doc/" target="_blank" rel="noopener noreferrer">clist.by</a> mirrors every platform and does allow browser access, so one authenticated call covers all four. Your key is already set — Codeforces, CodeChef, AtCoder and LeetCode all come through live. Clear the field to fall back to Codeforces-direct plus fixed weekly slots.</p>
+        <label>clist.by credentials
+          <input type="text" id="clistKey" placeholder="username:api_key" autocomplete="off" spellcheck="false">
+        </label>
+        <p class="clist-note">Stored in this browser and sent only to clist.by. It is also written into <span class="mono">contests.js</span> as the default — if you publish this folder anywhere public, remove that line first and paste the key here instead.</p>
+      </details>
+
+      <p class="contest-status" id="contestStatus">Open this tab to load contests.</p>
+      <div id="contestList"></div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>Parsed from Lougu-Training.md, USACO-Guide.md, Cp-books.md, LightOJ.md and CSES.md — 504 sections, 4,427 unique problem IDs. Progress is stored locally in this browser; use Export/Import to move it between devices.</span>
+    <span>Links route through <span class="mono">vjudge.net</span> (unified mirror) except Luogu and CSES, which link direct.</span>
+  </footer>
+</div>
+
+<div id="printRoot" aria-hidden="true"></div>
+
+<script src="script.js"></script>
+<script src="templates.js"></script>
+<script src="contests.js"></script>
+</body>
+</html>

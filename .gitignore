@@ -1,0 +1,3 @@
+# local backup of the pre-split single-file version
+*.bak
+.DS_Store

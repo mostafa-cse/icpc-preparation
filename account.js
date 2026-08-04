@@ -261,8 +261,11 @@
     if (!sb || !user) return;
     setSyncState("saving");
     try {
+      // Every row must carry an id: supabase-js derives the `columns` list from
+      // the object keys, so an `id: undefined` still sends the column and
+      // PostgREST reads it as NULL, which the primary key rejects.
       const rows = list.map((t, i) => ({
-        id: /^[0-9a-f-]{36}$/i.test(t.id || "") ? t.id : undefined,
+        id: t.id,
         user_id: user.id,
         title: t.title,
         category: t.category || "Misc",
@@ -272,7 +275,7 @@
         code: t.code || "",
         position: i,
       }));
-      const keep = rows.filter(r => r.id).map(r => r.id);
+      const keep = rows.map(r => r.id).filter(Boolean);
       let del = sb.from(T_TEMPLATES).delete().eq("user_id", user.id);
       if (keep.length) del = del.not("id", "in", "(" + keep.join(",") + ")");
       const { error: delErr } = await del;

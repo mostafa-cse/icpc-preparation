@@ -23,9 +23,21 @@
   }
 
   // ---------- Storage ----------
+  // Ids are UUIDs because they double as the primary key in Supabase.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function newId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+      const r = (Math.random() * 16) | 0;
+      return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+    });
+  }
+
   let templates = [];
   try { templates = JSON.parse(localStorage.getItem(STORE) || "[]"); } catch (e) {}
   if (!Array.isArray(templates)) templates = [];
+  // Upgrade ids saved by earlier versions ("t1699…") to UUIDs.
+  templates.forEach(t => { if (!UUID_RE.test(t.id || "")) t.id = newId(); });
 
   let meta = { title: "ICPC Team Notebook", authors: "", date: "" };
   try { Object.assign(meta, JSON.parse(localStorage.getItem(META_STORE) || "{}")); } catch (e) {}
@@ -420,7 +432,7 @@
       const t = templates.find(x => x.id === editingId);
       Object.assign(t, payload, { updatedAt: new Date().toISOString() });
     } else {
-      templates.push(Object.assign({ id: "t" + Date.now() + Math.random().toString(36).slice(2, 7), createdAt: new Date().toISOString() }, payload));
+      templates.push(Object.assign({ id: newId(), createdAt: new Date().toISOString() }, payload));
     }
     persist(); closeEditor(); render();
   }
@@ -711,7 +723,7 @@
         const known = new Set(templates.map(t => t.id));
         incoming.forEach(t => {
           if (!t || !t.title || !t.code) return;
-          const id = known.has(t.id) || !t.id ? "t" + Date.now() + Math.random().toString(36).slice(2, 7) : t.id;
+          const id = (!t.id || known.has(t.id) || !UUID_RE.test(t.id)) ? newId() : t.id;
           templates.push({
             id,
             title: String(t.title),

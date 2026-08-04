@@ -2,8 +2,9 @@
  * Accounts + progress sync (Supabase).
  *
  * Replaces the old shared-password gate. Each person signs in with their own
- * email + password, and their solved problems live in the solved_problems table
- * keyed by user_id, so progress follows them across devices.
+ * email + password. Their solved problems (problem_progress), notebook
+ * templates (templates) and preferences (user_settings) all hang off user_id,
+ * so everything follows them across devices.
  *
  * localStorage is kept as an offline mirror only. On sign-in the server's rows
  * win; on sign-out the mirror is cleared so the next person doesn't inherit it.
@@ -17,12 +18,16 @@
   const root = document.documentElement;
   root.classList.add("locked");
 
-  const TABLE = "solved_problems";
+  const T_PROGRESS = "problem_progress";
+  const T_TEMPLATES = "templates";
+  const T_SETTINGS = "user_settings";
   let sb = null;            // supabase client
   let user = null;          // current auth user
   let profile = null;       // row from public.profiles
   let lastSynced = new Set();
   let syncTimer = null;
+  let tplTimer = null;
+  let settings = null;
   let offline = false;
 
   function esc(s) {
@@ -184,8 +189,9 @@
     const PAGE = 1000;
     for (let from = 0; ; from += PAGE) {
       const { data, error } = await sb
-        .from(TABLE).select("problem_id")
+        .from(T_PROGRESS).select("problem_id")
         .eq("user_id", user.id)
+        .eq("status", "solved")
         .range(from, from + PAGE - 1);
       if (error) throw error;
       rows.push(...data.map(r => r.problem_id));
@@ -208,15 +214,15 @@
       if (added.length) {
         for (let i = 0; i < added.length; i += 500) {
           const chunk = added.slice(i, i + 500)
-            .map(problem_id => ({ user_id: user.id, problem_id }));
-          const { error } = await sb.from(TABLE).upsert(chunk, { onConflict: "user_id,problem_id" });
+            .map(problem_id => ({ user_id: user.id, problem_id, status: "solved" }));
+          const { error } = await sb.from(T_PROGRESS).upsert(chunk, { onConflict: "user_id,problem_id" });
           if (error) throw error;
         }
       }
       if (removed.length) {
         for (let i = 0; i < removed.length; i += 500) {
           const chunk = removed.slice(i, i + 500);
-          const { error } = await sb.from(TABLE).delete()
+          const { error } = await sb.from(T_PROGRESS).delete()
             .eq("user_id", user.id).in("problem_id", chunk);
           if (error) throw error;
         }
@@ -224,6 +230,78 @@
       lastSynced = now;
       setSyncState("saved");
       renderProfile();
+    } catch (err) {
+      setSyncState("error", friendly(err));
+    }
+  }
+
+  // ------------------------------------------------- templates + settings --
+  // Templates are small in number, so the whole set is replaced on save rather
+  // than diffed; that keeps ordering and deletes trivially correct.
+  async function pullTemplates() {
+    if (!sb || !user) return;
+    const { data, error } = await sb.from(T_TEMPLATES)
+      .select("*").eq("user_id", user.id)
+      .order("category").order("position");
+    if (error) throw error;
+    const mapped = (data || []).map(r => ({
+      id: r.id,
+      title: r.title,
+      category: r.category,
+      description: r.description || "",
+      timeComplexity: r.time_complexity || "",
+      spaceComplexity: r.space_complexity || "",
+      code: r.code || "",
+      createdAt: r.created_at,
+    }));
+    if (window.ICPCTemplates) window.ICPCTemplates.replaceAll(mapped);
+  }
+
+  async function pushTemplates(list) {
+    if (!sb || !user) return;
+    setSyncState("saving");
+    try {
+      const rows = list.map((t, i) => ({
+        id: /^[0-9a-f-]{36}$/i.test(t.id || "") ? t.id : undefined,
+        user_id: user.id,
+        title: t.title,
+        category: t.category || "Misc",
+        description: t.description || "",
+        time_complexity: t.timeComplexity || "",
+        space_complexity: t.spaceComplexity || "",
+        code: t.code || "",
+        position: i,
+      }));
+      const keep = rows.filter(r => r.id).map(r => r.id);
+      let del = sb.from(T_TEMPLATES).delete().eq("user_id", user.id);
+      if (keep.length) del = del.not("id", "in", "(" + keep.join(",") + ")");
+      const { error: delErr } = await del;
+      if (delErr) throw delErr;
+      if (rows.length) {
+        const { error } = await sb.from(T_TEMPLATES).upsert(rows, { onConflict: "id" });
+        if (error) throw error;
+      }
+      setSyncState("saved");
+    } catch (err) {
+      setSyncState("error", friendly(err));
+    }
+  }
+
+  async function pullSettings() {
+    if (!sb || !user) return;
+    const { data } = await sb.from(T_SETTINGS).select("*").eq("user_id", user.id).single();
+    if (!data) return;
+    settings = data;
+    if (window.ICPCSettings) window.ICPCSettings.apply(data);
+  }
+
+  async function pushSettings(patch) {
+    if (!sb || !user) return;
+    try {
+      const { error } = await sb.from(T_SETTINGS)
+        .upsert(Object.assign({ user_id: user.id }, patch), { onConflict: "user_id" });
+      if (error) throw error;
+      settings = Object.assign(settings || {}, patch);
     } catch (err) {
       setSyncState("error", friendly(err));
     }
@@ -359,6 +437,8 @@
           await pushProgress([...merged]);
         }
       }
+      await pullSettings();
+      await pullTemplates();
     } catch (err) {
       setSyncState("error", friendly(err));
     }
@@ -372,6 +452,17 @@
 
     window.ICPCProgress = Object.assign(window.ICPCProgress || {}, {
       onChange(ids) { if (!offline && user) scheduleSync(ids); },
+    });
+    window.ICPCTemplates = Object.assign(window.ICPCTemplates || {}, {
+      onChange(list) {
+        if (offline || !user) return;
+        clearTimeout(tplTimer);
+        setSyncState("pending");
+        tplTimer = setTimeout(() => pushTemplates(list), 700);
+      },
+    });
+    window.ICPCSettings = Object.assign(window.ICPCSettings || {}, {
+      onChange(patch) { if (!offline && user) pushSettings(patch); },
     });
 
     if (offline) { buildGate(); return; }

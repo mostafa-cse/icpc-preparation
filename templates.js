@@ -30,7 +30,11 @@
   let meta = { title: "ICPC Team Notebook", authors: "", date: "" };
   try { Object.assign(meta, JSON.parse(localStorage.getItem(META_STORE) || "{}")); } catch (e) {}
 
-  function persist() { localStorage.setItem(STORE, JSON.stringify(templates)); }
+  function persist() {
+    localStorage.setItem(STORE, JSON.stringify(templates));
+    const sync = window.ICPCTemplates && window.ICPCTemplates.onChange;
+    if (typeof sync === "function") sync(templates);
+  }
   function persistMeta() { localStorage.setItem(META_STORE, JSON.stringify(meta)); }
 
   // ---------- Notebook hash ----------
@@ -730,6 +734,16 @@
   });
 
   // Notebook identity fields
+  // Let account.js swap the library in from the signed-in user's rows.
+  window.ICPCTemplates = Object.assign(window.ICPCTemplates || {}, {
+    replaceAll(list) {
+      templates = Array.isArray(list) ? list : [];
+      localStorage.setItem(STORE, JSON.stringify(templates));
+      render();
+    },
+    snapshot: () => templates.slice(),
+  });
+
   const mTitle = document.getElementById("tplMetaTitle");
   const mAuthors = document.getElementById("tplMetaAuthors");
   function syncMetaInputs() { mTitle.value = meta.title || ""; mAuthors.value = meta.authors || ""; }

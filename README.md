@@ -100,11 +100,31 @@ What the database enforces, regardless of what the UI does:
 - `moderation_log` has no insert or update policy, so the audit trail cannot be
   forged or rewritten from a browser.
 
-To make someone else an admin by hand:
+To make someone an admin by hand, from the Supabase **SQL Editor**:
 
 ```sql
 update public.profiles set role = 'admin', status = 'approved'
  where email = 'them@example.com';
+```
+
+This works because the guard trigger stands aside when there is no JWT — the
+SQL editor, `psql`, a migration. It is not a hole: an unauthenticated client
+cannot match a row anyway, since the owner-update policy requires
+`auth.uid() = id`, and `anon` has no update grant on the table at all. From a
+browser the same statement changes nothing.
+
+If your project still has the earlier trigger, that `update` fails with
+*"status and role are managed by admin functions"*. Either re-run this file, or
+use the flag the admin functions set, in one transaction:
+
+```sql
+do $$
+begin
+  perform set_config('app.privileged_write', 'on', true);
+  update public.profiles set role = 'admin', status = 'approved'
+   where email = 'them@example.com';
+end
+$$;
 ```
 
 ## Printing the notebook

@@ -193,7 +193,17 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
+  -- Set by admin_set_status()/admin_set_role() for the length of their
+  -- transaction; nothing else can turn it on.
   if current_setting('app.privileged_write', true) = 'on' then
+    return new;
+  end if;
+  -- No JWT means this is not a browser request — the SQL editor, psql, a
+  -- migration. Those are already trusted: an anonymous client cannot reach
+  -- this row at all, because the owner-update policy requires auth.uid() = id.
+  -- Without this the documented bootstrap UPDATE fails, since a trigger fires
+  -- for the table owner too.
+  if auth.uid() is null then
     return new;
   end if;
   if new.status is distinct from old.status

@@ -29,6 +29,12 @@
   let tplTimer = null;
   let settings = null;
   let offline = false;
+  let recovering = false;   // arrived on a password-reset link
+
+  // Captured before the Supabase client exists: detectSessionInUrl consumes the
+  // fragment as soon as createClient runs, so reading location.hash later finds
+  // nothing and the reset screen never opens.
+  const ARRIVED_ON_RESET = /(^|[#&?])type=recovery(&|$)/.test(location.hash + location.search);
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
@@ -141,9 +147,18 @@
         msg.textContent = "Type your email above first, then hit this again.";
         return;
       }
-      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.href });
+      const btnEl = document.getElementById("authForgot");
+      btnEl.disabled = true;
+      // A clean page URL: location.href can already carry a token fragment, and
+      // Supabase only honours redirects that match its allow-list exactly.
+      const back = location.origin + location.pathname;
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: back });
+      btnEl.disabled = false;
       msg.className = error ? "auth-msg err" : "auth-msg ok";
-      msg.textContent = error ? friendly(error) : "Password reset link sent to " + email + ".";
+      msg.textContent = error
+        ? friendly(error)
+        : "If " + email + " has an account, a reset link is on its way. Check spam — " +
+          "Supabase's built-in mail is rate limited and often lands there.";
     });
 
     // A message queued by closeApp() (e.g. "Signed out.") shows on the fresh gate.
@@ -153,13 +168,68 @@
     }
   }
 
+  // Shown when the user arrives on a reset link. Without this the link merely
+  // signed them in and dropped them into the app, with nowhere to set a new
+  // password — which is what made "Forgot password?" look broken.
+  function buildResetScreen() {
+    recovering = true;
+    root.classList.add("locked");
+    removeGate();
+    const el = document.createElement("div");
+    el.id = "authScreen";
+    el.innerHTML =
+      '<form class="auth-card" id="pwForm" autocomplete="on" novalidate>' +
+        '<span class="lock-mark">🔑</span>' +
+        "<h1>Set a new password</h1>" +
+        '<p class="auth-sub">You followed a reset link. Choose a new password to finish.</p>' +
+        '<label class="auth-field">New password' +
+          '<input type="password" id="pwPass" autocomplete="new-password" required ' +
+            'placeholder="At least 6 characters"></label>' +
+        '<label class="auth-field">Repeat it' +
+          '<input type="password" id="pwPass2" autocomplete="new-password" required ' +
+            'placeholder="Same again"></label>' +
+        '<p class="auth-msg" id="pwMsg" role="alert"></p>' +
+        '<button type="submit" class="btn primary" id="pwBtn">Save password</button>' +
+      "</form>";
+    document.body.appendChild(el);
+
+    const msg = document.getElementById("pwMsg");
+    const btn = document.getElementById("pwBtn");
+    document.getElementById("pwForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const a = document.getElementById("pwPass").value;
+      const b = document.getElementById("pwPass2").value;
+      msg.className = "auth-msg";
+      if (a.length < 6) { msg.className = "auth-msg err"; msg.textContent = "At least 6 characters."; return; }
+      if (a !== b) { msg.className = "auth-msg err"; msg.textContent = "Those two don't match."; return; }
+      btn.disabled = true; btn.textContent = "Saving…";
+      try {
+        const { error } = await sb.auth.updateUser({ password: a });
+        if (error) throw error;
+        // Drop the recovery token so a refresh does not re-enter this screen.
+        history.replaceState(null, "", location.pathname + location.search);
+        recovering = false;
+        const { data } = await sb.auth.getSession();
+        removeGate();
+        if (data && data.session) await afterSignIn(data.session);
+        else closeApp({ kind: "ok", text: "Password changed. Sign in with it." });
+      } catch (err) {
+        msg.className = "auth-msg err";
+        msg.textContent = friendly(err);
+        btn.disabled = false; btn.textContent = "Save password";
+      }
+    });
+  }
+
   function friendly(err) {
     const m = (err && err.message) || String(err);
     if (/invalid login credentials/i.test(m)) return "Wrong email or password.";
     if (/email not confirmed/i.test(m)) return "Confirm your email first — check your inbox for the link.";
     if (/already registered/i.test(m)) return "That email already has an account. Switch to Sign in.";
     if (/password should be at least/i.test(m)) return "Password must be at least 6 characters.";
-    if (/rate limit|too many/i.test(m)) return "Too many attempts. Wait a minute and try again.";
+    if (/rate limit|too many|for security purposes/i.test(m))
+      return "Too many attempts. Supabase's built-in mail is rate limited — wait a few minutes.";
+    if (/same as the old|should be different/i.test(m)) return "That is already your password.";
     if (/failed to fetch|networkerror/i.test(m)) return "Can't reach Supabase — check your connection or the Project URL.";
     return m;
   }
@@ -478,6 +548,20 @@
       '<section class="doc-section"><h2>By training block</h2><div class="pf-list">' + rows(bd.phases) + "</div></section>" +
       '<section class="doc-section"><h2>By source file</h2><div class="pf-list">' + rows(bd.files) + "</div></section>" +
 
+      (offline || !user ? "" :
+        '<section class="doc-section"><h2>Password</h2>' +
+          '<form class="pf-pass" id="pfPassForm" novalidate>' +
+            '<label class="auth-field">New password' +
+              '<input type="password" id="pfPass" autocomplete="new-password" ' +
+                'placeholder="At least 6 characters"></label>' +
+            '<label class="auth-field">Repeat it' +
+              '<input type="password" id="pfPass2" autocomplete="new-password" ' +
+                'placeholder="Same again"></label>' +
+            '<button type="submit" class="btn" id="pfPassBtn">Change password</button>' +
+            '<p class="auth-msg" id="pfPassMsg" role="alert"></p>' +
+          "</form>" +
+        "</section>") +
+
       '<section class="doc-section"><h2>Preferences</h2>' +
         '<div class="pf-pref">' +
           '<div class="pf-pref-text">' +
@@ -500,6 +584,31 @@
 
     const out = document.getElementById("signOutBtn");
     if (out) out.addEventListener("click", signOut);
+
+    const passForm = document.getElementById("pfPassForm");
+    if (passForm) passForm.addEventListener("submit", async e => {
+      e.preventDefault();
+      const a = document.getElementById("pfPass").value;
+      const b = document.getElementById("pfPass2").value;
+      const m = document.getElementById("pfPassMsg");
+      const btn = document.getElementById("pfPassBtn");
+      m.className = "auth-msg";
+      if (a.length < 6) { m.className = "auth-msg err"; m.textContent = "At least 6 characters."; return; }
+      if (a !== b) { m.className = "auth-msg err"; m.textContent = "Those two don't match."; return; }
+      btn.disabled = true; btn.textContent = "Saving…";
+      try {
+        const { error } = await sb.auth.updateUser({ password: a });
+        if (error) throw error;
+        m.className = "auth-msg ok";
+        m.textContent = "Password changed.";
+        document.getElementById("pfPass").value = "";
+        document.getElementById("pfPass2").value = "";
+      } catch (err) {
+        m.className = "auth-msg err";
+        m.textContent = friendly(err);
+      }
+      btn.disabled = false; btn.textContent = "Change password";
+    });
     document.getElementById("pfExport").addEventListener("click", () => document.getElementById("exportBtn").click());
     document.getElementById("pfImport").addEventListener("click", () => document.getElementById("importBtn").click());
   }
@@ -583,6 +692,11 @@
     });
 
     sb.auth.onAuthStateChange((event, session) => {
+      // Must come first: a recovery link also produces a session, and letting
+      // that fall through would drop the user into the app with no way to set
+      // the password they came here to change.
+      if (event === "PASSWORD_RECOVERY") { buildResetScreen(); return; }
+      if (recovering) return;
       if (session && session.user) {
         if (!user || user.id !== session.user.id) afterSignIn(session);
       } else if (event === "SIGNED_OUT") {
@@ -590,7 +704,13 @@
       }
     });
 
+    // Checked as well as the event: whether PASSWORD_RECOVERY fires depends on
+    // the token still being valid, but arriving on the link at all should show
+    // the screen either way.
+    if (ARRIVED_ON_RESET) { buildResetScreen(); return; }
+
     const { data } = await sb.auth.getSession();
+    if (recovering) return;
     if (data && data.session) await afterSignIn(data.session);
     else buildGate();
   }

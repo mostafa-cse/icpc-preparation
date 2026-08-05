@@ -45,6 +45,22 @@ If email confirmation is on (the Supabase default), new accounts must click the
 link in their inbox before signing in. Turn it off under
 **Authentication -> Providers -> Email** for instant signup.
 
+### Forgot password
+
+**Forgot password?** on the sign-in card mails a reset link. Following it opens
+a *Set a new password* screen; the app will not let you in until you finish it.
+A signed-in user can also change their password under **Profile -> Password**.
+
+Two settings decide whether the mail ever arrives:
+
+- **Authentication -> URL Configuration -> Redirect URLs** must list the exact
+  page the app is served from, e.g. `https://you.github.io/icpc-preparation/`.
+  Supabase silently ignores a `redirect_to` that is not on this list and falls
+  back to the Site URL.
+- Supabase's built-in mail is rate limited to a few messages an hour and often
+  lands in spam. For anything beyond testing, set your own SMTP under
+  **Project Settings -> Auth -> SMTP**.
+
 With `supabase-config.js` left blank the app runs in **offline mode**: the
 tracker works and progress is kept in this browser, but there are no accounts
 and nothing syncs.

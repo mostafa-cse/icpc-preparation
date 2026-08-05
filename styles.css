@@ -1217,3 +1217,6 @@
     font: inherit; font-size: 0.74rem; cursor: pointer; padding: 0;
     background: none; border: none; color: var(--accent-ink); text-decoration: underline;
   }
+  .pf-pass { display: flex; gap: 0.7rem; align-items: flex-end; flex-wrap: wrap; max-width: 46rem; }
+  .pf-pass .auth-field { flex: 1 1 12rem; margin: 0; }
+  .pf-pass .auth-msg { flex-basis: 100%; margin: 0.2rem 0 0; }

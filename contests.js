@@ -359,6 +359,18 @@
     return next ? [next] : [];
   }
 
+  // The Contests tab deliberately shows only the next round. The Routine tab
+  // needs every contest that could land in today's schedule — two platforms can
+  // run on the same day — and it needs a contest that has already begun, which
+  // visibleContests() drops.
+  function broadcast() {
+    const active = activePlatforms();
+    const now = Date.now();
+    const list = contests.filter(c =>
+      active.has(c.platform) && c.start.getTime() + (c.durationSec || 7200) * 1000 > now);
+    document.dispatchEvent(new CustomEvent("icpc:contests", { detail: list }));
+  }
+
   function scheduleAll() {
     timers.forEach(clearTimeout);
     timers = [];
@@ -387,6 +399,7 @@
     if (!list.length) {
       if (contests.length) listEl.innerHTML = '<p class="empty-note">No upcoming contests for the selected platforms.</p>';
       document.dispatchEvent(new CustomEvent("icpc:nextcontest", { detail: null }));
+      broadcast();
       return;
     }
 
@@ -456,6 +469,7 @@
 
     // The Routine tab builds its Contest Day card backwards from this.
     document.dispatchEvent(new CustomEvent("icpc:nextcontest", { detail: list[0] || null }));
+    broadcast();
   }
 
   function tickCountdowns() {
@@ -526,11 +540,9 @@
   updateNotifyBtn();
   setInterval(tickCountdowns, 1000);
 
-  // Load lazily: only hit the network once the tab is actually opened.
-  let loaded = false;
-  document.querySelector('.tab[data-tab="contests"]').addEventListener("click", () => {
-    if (loaded) return;
-    loaded = true;
-    loadContests();
-  });
+  // Loaded at startup rather than when the tab is opened. The Routine tab is
+  // built around today's contests, so waiting for a click meant the schedule
+  // never showed a contest day unless you happened to visit Contests first.
+  let loaded = true;
+  loadContests();
 })();

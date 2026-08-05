@@ -76,7 +76,7 @@
   const CONTEST_TRIM = { prac1: 90, prac3: 60, revision: 60, theory: 30 };
 
   let dayStart = readStored();
-  let nextContest = null;
+  let contests = [];        // every contest still ahead, across all platforms
   let calculated = null;    // today's astronomical times, or null while loading
   let overrides = readPrayerOverrides();
   let prayer = null;        // what the schedule is actually built from
@@ -163,6 +163,23 @@
     return min < dayStart ? min + 1440 : min;
   }
 
+  // The instant the current training day began. Before the start time you are
+  // still inside yesterday's day, which is what makes a 00:40 post-mortem line
+  // up with the contest that produced it.
+  function dayStartAt() {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setMinutes(dayStart);
+    if (nowMins() < dayStart) d.setDate(d.getDate() - 1);
+    return d;
+  }
+
+  // Minutes from the start of the training day. Matching on the clock alone
+  // drew a contest three days out as though it were happening today.
+  function offsetOf(date) {
+    return dayStart + Math.round((date.getTime() - dayStartAt().getTime()) / 60000);
+  }
+
   // ------------------------------------------------------------------ build --
   // Places a block at its preferred time, sliding it later if something with a
   // stronger claim is already there. Priority is the order blocks are placed
@@ -206,8 +223,11 @@
     const end = dayStart + DAY_LENGTH;
     const p = prayer || {};
 
-    // 1. The contest and everything welded to it.
-    contestRows().forEach(r => rows.push(r));
+    // 1. The contests themselves — facts, pushed straight in. Post-mortems come
+    //    after the prayers so a second round on the same day is not buried
+    //    under the first one's upsolve session.
+    const rounds = contestRows();
+    rounds.forEach(r => rows.push(r));
 
     // 2. Prayers, at their real times. A prayer that lands inside the contest
     //    slides to just after it rather than being drawn on top of it.
@@ -231,11 +251,19 @@
     prayerAt("Maghrib", named("Maghrib"), 20, 735);
     prayerAt("Isha", named("Isha"), 30, 870);
 
-    // The pre-contest reset takes whatever room is left in front of the round.
+    // Each round gets an upsolve session straight after it, placed rather than
+    // pushed so it gives way to a later contest on the same day.
+    rounds.forEach(round => {
+      place(rows, round.to, POSTMORTEM_MIN, {
+        category: "POSTMORTEM", activity: "Upsolve &amp; editorial review",
+        note: "Finish what you didn't solve live. Editorial only after your own attempt.",
+      });
+    });
+
+    // The pre-contest reset takes whatever room is left in front of each round.
     // If a prayer already fills it, that prayer *is* the reset — better than
     // inventing a block that has nowhere to go.
-    const round = rows.find(r => r.category === "CONTEST");
-    if (round) {
+    rounds.forEach(round => {
       let gapStart = round.from - PREP_MIN;
       rows.forEach(o => {
         if (o !== round && o.to > gapStart && o.from < round.from) gapStart = Math.max(gapStart, o.to);
@@ -246,7 +274,7 @@
           note: "Skim your template library, stretch, no new topics.",
         });
       }
-    }
+    });
 
     // 3. The morning, anchored to the day start.
     place(rows, dayStart, 30, {
@@ -284,22 +312,27 @@
     return rows;
   }
 
-  function contestRows() {
-    if (!nextContest || !nextContest.start) return [];
-    const s = nextContest.start;
-    const at = fromDayStart(s.getHours() * 60 + s.getMinutes());
-    const len = Math.max(30, Math.round((nextContest.durationSec || 0) / 60)) || 120;
-    const end = at + len;
-    const label = nextContest.name || "Live contest";
+  // Every contest whose window overlaps today's training day. Two platforms can
+  // land on the same date, so this is a list rather than a single round.
+  function contestsToday() {
+    const end = dayStart + DAY_LENGTH;
+    return contests
+      .filter(c => c && c.start)
+      .map(c => {
+        const at = offsetOf(c.start);
+        const len = Math.max(30, Math.round((c.durationSec || 0) / 60)) || 120;
+        return { at, len, name: c.name, url: c.url, platform: c.platform };
+      })
+      .filter(c => c.at + c.len > dayStart && c.at < end)
+      .sort((a, b) => a.at - b.at);
+  }
 
-    return [
-      { from: at, to: end, category: "CONTEST", activity: label, live: true,
-        url: nextContest.url,
-        note: "Full focus, no outside help. Treat every minute like the real thing." },
-      { from: end, to: end + POSTMORTEM_MIN,
-        category: "POSTMORTEM", activity: "Upsolve &amp; editorial review",
-        note: "Finish what you didn't solve live. Editorial only after your own attempt." },
-    ];
+  function contestRows() {
+    return contestsToday().map(c => ({
+      from: c.at, to: c.at + c.len, category: "CONTEST",
+      activity: c.name || "Live contest", live: true, url: c.url,
+      note: "Full focus, no outside help. Treat every minute like the real thing.",
+    }));
   }
 
   // Gaps left between the fixed blocks, big enough to be worth using.
@@ -353,10 +386,15 @@
     const fixed = layout();
     const isContestDay = fixed.some(r => r.category === "CONTEST");
 
+    // Two contests in a day cost twice the time, so the trim scales with how
+    // many actually landed rather than being a flat contest-day discount.
+    const roundCount = fixed.filter(r => r.category === "CONTEST").length;
     let pools = POOLS.map(p => Object.assign({}, p));
-    if (isContestDay) {
+    if (roundCount) {
       pools = pools
-        .map(p => CONTEST_TRIM[p.id] ? Object.assign({}, p, { mins: p.mins - CONTEST_TRIM[p.id] }) : p)
+        .map(p => CONTEST_TRIM[p.id]
+          ? Object.assign({}, p, { mins: p.mins - CONTEST_TRIM[p.id] * roundCount })
+          : p)
         .filter(p => p.mins >= MIN_BLOCK);
     }
 
@@ -578,8 +616,11 @@
     }
   });
 
-  document.addEventListener("icpc:nextcontest", e => {
-    nextContest = e.detail || null;
+  // One source of truth. The Contests tab also emits icpc:nextcontest for its
+  // own card, but the routine ignores it: two events feeding the same state is
+  // how they end up disagreeing.
+  document.addEventListener("icpc:contests", e => {
+    contests = Array.isArray(e.detail) ? e.detail : [];
     render();
   });
 
@@ -599,6 +640,7 @@
     dayStart: () => dayStart,
     dayStartHHMM: () => hhmm(dayStart),
     schedule: () => schedule.slice(),
+    contestsToday: () => contestsToday(),
     render,
   };
 

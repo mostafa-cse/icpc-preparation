@@ -42,6 +42,54 @@
   }
 
   // ---------------------------------------------------------------- gate UI --
+  // Adds a reveal toggle to every password box in `scope`. Applied after each
+  // render rather than written into the markup, so the sign-in card, the reset
+  // screen and Profile all get it from one place and cannot drift apart.
+  const EYE = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">' +
+    '<path fill="none" stroke="currentColor" stroke-width="1.7" ' +
+    'd="M1.8 12S5.4 5.5 12 5.5 22.2 12 22.2 12 18.6 18.5 12 18.5 1.8 12 1.8 12Z"/>' +
+    '<circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>';
+  const EYE_OFF = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">' +
+    '<path fill="none" stroke="currentColor" stroke-width="1.7" ' +
+    'd="M1.8 12S5.4 5.5 12 5.5c1.6 0 3 .4 4.2 1M22.2 12s-3.6 6.5-10.2 6.5c-1.6 0-3-.4-4.2-1"/>' +
+    '<path fill="none" stroke="currentColor" stroke-width="1.7" d="M9.9 9.9a3.1 3.1 0 0 0 4.2 4.2"/>' +
+    '<path fill="none" stroke="currentColor" stroke-width="1.7" d="M3.5 3.5l17 17"/></svg>';
+
+  function addPasswordToggles(scope) {
+    (scope || document).querySelectorAll('input[type="password"]').forEach(input => {
+      if (input.dataset.pwToggle) return;
+      input.dataset.pwToggle = "1";
+
+      const wrap = document.createElement("span");
+      wrap.className = "pw-wrap";
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+
+      const btn = document.createElement("button");
+      btn.type = "button";           // never submit the form it sits in
+      btn.className = "pw-eye";
+      btn.innerHTML = EYE;
+      btn.title = "Show password";
+      btn.setAttribute("aria-label", "Show password");
+      btn.setAttribute("aria-pressed", "false");
+      // Keep focus in the field: clicking the eye should not blur what you type.
+      btn.addEventListener("mousedown", e => e.preventDefault());
+      btn.addEventListener("click", () => {
+        const reveal = input.type === "password";
+        input.type = reveal ? "text" : "password";
+        btn.innerHTML = reveal ? EYE_OFF : EYE;
+        btn.title = reveal ? "Hide password" : "Show password";
+        btn.setAttribute("aria-label", btn.title);
+        btn.setAttribute("aria-pressed", String(reveal));
+        btn.classList.toggle("is-on", reveal);
+        const at = input.value.length;
+        input.focus();
+        try { input.setSelectionRange(at, at); } catch (e) {}
+      });
+      wrap.appendChild(btn);
+    });
+  }
+
   function buildGate() {
     if (document.getElementById("authScreen") || !document.body) return;
     const el = document.createElement("div");
@@ -161,6 +209,8 @@
           "Supabase's built-in mail is rate limited and often lands there.";
     });
 
+    addPasswordToggles(el);
+
     // A message queued by closeApp() (e.g. "Signed out.") shows on the fresh gate.
     {
       const m = buildGate.pendingMessage;
@@ -193,6 +243,7 @@
       "</form>";
     document.body.appendChild(el);
 
+    addPasswordToggles(el);
     const msg = document.getElementById("pwMsg");
     const btn = document.getElementById("pwBtn");
     document.getElementById("pwForm").addEventListener("submit", async e => {
@@ -581,6 +632,8 @@
           '<button class="btn" id="pfImport" type="button">Import progress</button>' +
         "</div>" +
       "</section>";
+
+    addPasswordToggles(host);
 
     const out = document.getElementById("signOutBtn");
     if (out) out.addEventListener("click", signOut);

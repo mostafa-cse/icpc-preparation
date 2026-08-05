@@ -51,11 +51,31 @@ $$;
 -- ============================================================================
 -- 1. profiles — public-facing identity, 1:1 with auth.users
 -- ============================================================================
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'account_status') then
+    create type public.account_status as enum ('pending', 'approved', 'declined', 'banned');
+  end if;
+end
+$$;
+
 create table if not exists public.profiles (
   id           uuid primary key references auth.users on delete cascade,
   display_name text,
   handle       text unique,
   avatar_emoji text,
+  -- Copied from auth.users at signup. auth.users is not reachable through
+  -- PostgREST, so without this an admin has no way to tell one pending
+  -- signup from another.
+  email        text,
+  -- New accounts wait for an admin. Every data policy below tests this, so a
+  -- pending or banned account is refused by the database itself rather than by
+  -- the UI — the anon key is public and anyone can call PostgREST directly.
+  status       public.account_status not null default 'pending',
+  role         text not null default 'member' check (role in ('member', 'admin')),
+  status_reason     text,
+  status_changed_at timestamptz,
+  status_changed_by uuid references auth.users on delete set null,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
   constraint handle_format check (
@@ -63,20 +83,132 @@ create table if not exists public.profiles (
   )
 );
 
+-- `create table if not exists` above is a no-op on an existing project, so the
+-- moderation columns are added explicitly. This must run before the functions
+-- below: they are `language sql` and are validated against these columns the
+-- moment they are created.
+--
+-- The grandfathering is deliberately tied to whether `status` had to be added
+-- on this run. Accounts that predate approval must not be locked out, but the
+-- backfill must never fire again — re-running this file with a queue of
+-- pending signups would otherwise approve every one of them silently.
+do $$
+declare
+  fresh_column boolean;
+  first_id uuid;
+begin
+  fresh_column := not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name = 'status'
+  );
+
+  alter table public.profiles add column if not exists email             text;
+  alter table public.profiles add column if not exists status            public.account_status not null default 'pending';
+  alter table public.profiles add column if not exists role              text not null default 'member';
+  alter table public.profiles add column if not exists status_reason     text;
+  alter table public.profiles add column if not exists status_changed_at timestamptz;
+  alter table public.profiles add column if not exists status_changed_by uuid;
+
+  if not exists (select 1 from pg_constraint where conname = 'profiles_role_check') then
+    alter table public.profiles
+      add constraint profiles_role_check check (role in ('member', 'admin'));
+  end if;
+
+  if fresh_column then
+    update public.profiles
+       set status = 'approved', status_changed_at = now()
+     where status = 'pending';
+
+    if not exists (select 1 from public.profiles where role = 'admin') then
+      select id into first_id from public.profiles order by created_at limit 1;
+      if first_id is not null then
+        update public.profiles set role = 'admin' where id = first_id;
+      end if;
+    end if;
+  end if;
+end
+$$;
+
+create index if not exists profiles_status_idx on public.profiles (status, created_at desc);
+
 comment on table public.profiles is 'Display identity for each account. Created automatically on signup.';
+
+-- A policy on profiles that reads profiles would recurse forever, so both
+-- helpers are security definer: they run as the owner and skip RLS. Both are
+-- also the single definition of "may use this site", used by every table below.
+create or replace function public.is_admin()
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin' and status = 'approved'
+  );
+$$;
+
+create or replace function public.is_approved()
+returns boolean
+language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and status = 'approved'
+  );
+$$;
+
+revoke all on function public.is_admin()    from public;
+revoke all on function public.is_approved() from public;
+grant execute on function public.is_admin()    to authenticated;
+grant execute on function public.is_approved() to authenticated;
 
 alter table public.profiles enable row level security;
 
 drop policy if exists "profiles: owner can read"   on public.profiles;
 drop policy if exists "profiles: owner can insert" on public.profiles;
 drop policy if exists "profiles: owner can update" on public.profiles;
+drop policy if exists "profiles: admin can read"   on public.profiles;
+drop policy if exists "profiles: admin can update" on public.profiles;
 
+-- Readable even while pending: the app has to be able to tell the user why it
+-- is not letting them in.
 create policy "profiles: owner can read"
   on public.profiles for select using (auth.uid() = id);
 create policy "profiles: owner can insert"
   on public.profiles for insert with check (auth.uid() = id);
 create policy "profiles: owner can update"
   on public.profiles for update using (auth.uid() = id) with check (auth.uid() = id);
+
+create policy "profiles: admin can read"
+  on public.profiles for select using (public.is_admin());
+create policy "profiles: admin can update"
+  on public.profiles for update using (public.is_admin()) with check (public.is_admin());
+
+-- RLS is row-level, not column-level: the owner-update policy above would
+-- otherwise let any user set their own status to 'approved' or role to 'admin'
+-- with a single PostgREST call. Privileged columns are therefore frozen here
+-- and only moved by admin_set_status()/admin_set_role(), which audit the change.
+create or replace function public.guard_profile_privileges()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if current_setting('app.privileged_write', true) = 'on' then
+    return new;
+  end if;
+  if new.status is distinct from old.status
+     or new.role is distinct from old.role
+     or new.status_reason is distinct from old.status_reason
+     or new.status_changed_by is distinct from old.status_changed_by then
+    raise exception 'status and role are managed by admin functions';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_guard_privileges on public.profiles;
+create trigger profiles_guard_privileges before update on public.profiles
+  for each row execute function public.guard_profile_privileges();
 
 drop trigger if exists profiles_touch on public.profiles;
 create trigger profiles_touch before update on public.profiles
@@ -127,13 +259,13 @@ drop policy if exists "settings: owner can update" on public.user_settings;
 drop policy if exists "settings: owner can delete" on public.user_settings;
 
 create policy "settings: owner can read"
-  on public.user_settings for select using (auth.uid() = user_id);
+  on public.user_settings for select using (auth.uid() = user_id and public.is_approved());
 create policy "settings: owner can insert"
-  on public.user_settings for insert with check (auth.uid() = user_id);
+  on public.user_settings for insert with check (auth.uid() = user_id and public.is_approved());
 create policy "settings: owner can update"
-  on public.user_settings for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  on public.user_settings for update using (auth.uid() = user_id and public.is_approved()) with check (auth.uid() = user_id and public.is_approved());
 create policy "settings: owner can delete"
-  on public.user_settings for delete using (auth.uid() = user_id);
+  on public.user_settings for delete using (auth.uid() = user_id and public.is_approved());
 
 drop trigger if exists user_settings_touch on public.user_settings;
 create trigger user_settings_touch before update on public.user_settings
@@ -178,13 +310,13 @@ drop policy if exists "progress: owner can update" on public.problem_progress;
 drop policy if exists "progress: owner can delete" on public.problem_progress;
 
 create policy "progress: owner can read"
-  on public.problem_progress for select using (auth.uid() = user_id);
+  on public.problem_progress for select using (auth.uid() = user_id and public.is_approved());
 create policy "progress: owner can insert"
-  on public.problem_progress for insert with check (auth.uid() = user_id);
+  on public.problem_progress for insert with check (auth.uid() = user_id and public.is_approved());
 create policy "progress: owner can update"
-  on public.problem_progress for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  on public.problem_progress for update using (auth.uid() = user_id and public.is_approved()) with check (auth.uid() = user_id and public.is_approved());
 create policy "progress: owner can delete"
-  on public.problem_progress for delete using (auth.uid() = user_id);
+  on public.problem_progress for delete using (auth.uid() = user_id and public.is_approved());
 
 drop trigger if exists problem_progress_touch on public.problem_progress;
 create trigger problem_progress_touch before update on public.problem_progress
@@ -223,13 +355,13 @@ drop policy if exists "templates: owner can update" on public.templates;
 drop policy if exists "templates: owner can delete" on public.templates;
 
 create policy "templates: owner can read"
-  on public.templates for select using (auth.uid() = user_id);
+  on public.templates for select using (auth.uid() = user_id and public.is_approved());
 create policy "templates: owner can insert"
-  on public.templates for insert with check (auth.uid() = user_id);
+  on public.templates for insert with check (auth.uid() = user_id and public.is_approved());
 create policy "templates: owner can update"
-  on public.templates for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  on public.templates for update using (auth.uid() = user_id and public.is_approved()) with check (auth.uid() = user_id and public.is_approved());
 create policy "templates: owner can delete"
-  on public.templates for delete using (auth.uid() = user_id);
+  on public.templates for delete using (auth.uid() = user_id and public.is_approved());
 
 drop trigger if exists templates_touch on public.templates;
 create trigger templates_touch before update on public.templates
@@ -265,11 +397,11 @@ drop policy if exists "reminders: owner can insert" on public.contest_reminders;
 drop policy if exists "reminders: owner can delete" on public.contest_reminders;
 
 create policy "reminders: owner can read"
-  on public.contest_reminders for select using (auth.uid() = user_id);
+  on public.contest_reminders for select using (auth.uid() = user_id and public.is_approved());
 create policy "reminders: owner can insert"
-  on public.contest_reminders for insert with check (auth.uid() = user_id);
+  on public.contest_reminders for insert with check (auth.uid() = user_id and public.is_approved());
 create policy "reminders: owner can delete"
-  on public.contest_reminders for delete using (auth.uid() = user_id);
+  on public.contest_reminders for delete using (auth.uid() = user_id and public.is_approved());
 
 
 -- ============================================================================
@@ -286,14 +418,26 @@ returns trigger
 language plpgsql
 security definer set search_path = public
 as $$
+declare
+  first_admin boolean;
 begin
-  insert into public.profiles (id, display_name)
+  -- Bootstrap: whoever creates the very first account owns the site, otherwise
+  -- a fresh project has a queue of pending users and nobody able to approve
+  -- them. Every signup after that waits for review.
+  select not exists (select 1 from public.profiles where role = 'admin')
+    into first_admin;
+
+  insert into public.profiles (id, display_name, email, status, role, status_changed_at)
   values (
     new.id,
     coalesce(
       nullif(trim(new.raw_user_meta_data ->> 'display_name'), ''),
       split_part(new.email, '@', 1)
-    )
+    ),
+    new.email,
+    case when first_admin then 'approved' else 'pending' end::public.account_status,
+    case when first_admin then 'admin'    else 'member'  end,
+    case when first_admin then now() end
   )
   on conflict (id) do nothing;
 
@@ -407,3 +551,202 @@ begin
   end if;
 end
 $$;
+
+
+-- ============================================================================
+-- 10. Moderation — admin review of new accounts
+--
+-- Approval is enforced by the policies above (every data table tests
+-- is_approved()), not by the UI. The anon key ships in the browser, so a
+-- rejected user can always call PostgREST by hand; the database is the only
+-- place a "no" actually holds.
+--
+-- Status changes go through the two functions below rather than a direct
+-- update, so that every decision is recorded and the guards below cannot be
+-- skipped by writing to the table.
+-- ============================================================================
+
+create table if not exists public.moderation_log (
+  id         bigint generated always as identity primary key,
+  actor_id   uuid references auth.users on delete set null,
+  target_id  uuid references auth.users on delete cascade,
+  action     text not null,
+  reason     text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists moderation_log_target_idx on public.moderation_log (target_id, created_at desc);
+create index if not exists moderation_log_created_idx on public.moderation_log (created_at desc);
+
+alter table public.moderation_log enable row level security;
+
+drop policy if exists "modlog: admin can read" on public.moderation_log;
+create policy "modlog: admin can read"
+  on public.moderation_log for select using (public.is_admin());
+-- No insert/update/delete policy on purpose: rows are only ever written by the
+-- security-definer functions below, so the audit trail cannot be forged or
+-- rewritten from the client.
+
+comment on table public.moderation_log is
+  'Append-only record of who changed whose account status, and why.';
+
+-- Section 8's grants run before this table exists. Only select is granted:
+-- writes come from the security-definer functions, never from a client.
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then
+    grant select on public.moderation_log to authenticated;
+  end if;
+end
+$$;
+
+
+-- ---------------------------------------------------------------- set status
+create or replace function public.admin_set_status(
+  target uuid,
+  new_status public.account_status,
+  reason text default null
+)
+returns public.profiles
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  row_out public.profiles;
+  admins_left integer;
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised';
+  end if;
+
+  -- Losing your own access mid-session is never what you meant to click, and
+  -- an admin who bans themselves cannot undo it from the UI.
+  if target = auth.uid() and new_status <> 'approved' then
+    raise exception 'you cannot decline or ban your own account';
+  end if;
+
+  -- Never leave the site with no one who can approve anybody.
+  if new_status <> 'approved' then
+    select count(*) into admins_left
+    from public.profiles
+    where role = 'admin' and status = 'approved' and id <> target;
+    if admins_left = 0 then
+      raise exception 'that is the last active admin';
+    end if;
+  end if;
+
+  perform set_config('app.privileged_write', 'on', true);
+  update public.profiles
+     set status            = new_status,
+         status_reason     = nullif(trim(coalesce(reason, '')), ''),
+         status_changed_at = now(),
+         status_changed_by = auth.uid()
+   where id = target
+  returning * into row_out;
+  perform set_config('app.privileged_write', 'off', true);
+
+  if row_out.id is null then
+    raise exception 'no such user';
+  end if;
+
+  insert into public.moderation_log (actor_id, target_id, action, reason)
+  values (auth.uid(), target, 'status:' || new_status, reason);
+
+  return row_out;
+end;
+$$;
+
+
+-- ------------------------------------------------------------------ set role
+create or replace function public.admin_set_role(target uuid, new_role text)
+returns public.profiles
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  row_out public.profiles;
+  admins_left integer;
+begin
+  if not public.is_admin() then
+    raise exception 'not authorised';
+  end if;
+  if new_role not in ('member', 'admin') then
+    raise exception 'unknown role %', new_role;
+  end if;
+  if target = auth.uid() and new_role <> 'admin' then
+    raise exception 'you cannot remove your own admin access';
+  end if;
+
+  if new_role = 'member' then
+    select count(*) into admins_left
+    from public.profiles
+    where role = 'admin' and status = 'approved' and id <> target;
+    if admins_left = 0 then
+      raise exception 'that is the last active admin';
+    end if;
+  end if;
+
+  perform set_config('app.privileged_write', 'on', true);
+  update public.profiles set role = new_role where id = target
+  returning * into row_out;
+  perform set_config('app.privileged_write', 'off', true);
+
+  if row_out.id is null then
+    raise exception 'no such user';
+  end if;
+
+  insert into public.moderation_log (actor_id, target_id, action)
+  values (auth.uid(), target, 'role:' || new_role);
+
+  return row_out;
+end;
+$$;
+
+
+-- -------------------------------------------------------------- the user list
+-- Returns the queue with a solved count per user. A plain view would expose
+-- one user's totals to another (see the note on progress_summary), so this is
+-- a function that refuses to answer anyone who is not an admin.
+create or replace function public.admin_list_users()
+returns table (
+  id uuid,
+  email text,
+  display_name text,
+  status public.account_status,
+  role text,
+  status_reason text,
+  status_changed_at timestamptz,
+  created_at timestamptz,
+  solved_count bigint
+)
+language sql stable security definer set search_path = public
+as $$
+  select p.id, p.email, p.display_name, p.status, p.role, p.status_reason,
+         p.status_changed_at, p.created_at,
+         (select count(*) from public.problem_progress pp
+           where pp.user_id = p.id and pp.status = 'solved')
+  from public.profiles p
+  where public.is_admin()
+  order by
+    case p.status when 'pending' then 0 when 'approved' then 1 else 2 end,
+    p.created_at desc;
+$$;
+
+revoke all on function public.admin_set_status(uuid, public.account_status, text) from public;
+revoke all on function public.admin_set_role(uuid, text) from public;
+revoke all on function public.admin_list_users() from public;
+grant execute on function public.admin_set_status(uuid, public.account_status, text) to authenticated;
+grant execute on function public.admin_set_role(uuid, text) to authenticated;
+grant execute on function public.admin_list_users() to authenticated;
+
+
+-- Grandfathering of pre-existing accounts happens in section 1, at the moment
+-- the status column is introduced — not here, so that re-running this file
+-- never approves a queue of waiting signups.
+
+-- Emails are only captured from signup onwards, so fill in the ones already
+-- created. auth.users is readable here because the file runs as the owner.
+update public.profiles p
+   set email = u.email
+  from auth.users u
+ where u.id = p.id and p.email is distinct from u.email;

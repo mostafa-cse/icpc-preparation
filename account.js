@@ -174,6 +174,67 @@
     removeGate();
     renderAccountBar();
     renderProfile();
+    const adminTab = document.querySelector('.tab[data-tab="admin"]');
+    if (adminTab) adminTab.hidden = !isAdmin();
+    if (isAdmin() && window.ICPCAdmin) window.ICPCAdmin.attach(sb, user);
+  }
+
+  function isAdmin() {
+    return !!(profile && profile.role === "admin" && profile.status === "approved");
+  }
+
+  // A profile with no `status` at all means supabase-schema.sql has not been
+  // re-run since approval was added. Treat that as approved rather than locking
+  // every existing user out of their own tracker.
+  function accountState() {
+    if (!profile || profile.status == null) return "approved";
+    return profile.status;
+  }
+
+  // Shown instead of the app when an account is not approved. Deliberately a
+  // dead end with only a sign-out: the database refuses this account's data
+  // anyway, so there is nothing to show behind it.
+  function buildStatusScreen() {
+    const state = accountState();
+    const copy = {
+      pending: {
+        mark: "⏳",
+        title: "Waiting for approval",
+        body: "Your account has been created and is in the queue for review. " +
+              "You will be able to sign in as soon as an admin approves it.",
+      },
+      declined: {
+        mark: "🚫",
+        title: "Account not approved",
+        body: "An admin reviewed this account and did not approve it.",
+      },
+      banned: {
+        mark: "⛔",
+        title: "Account suspended",
+        body: "Access to this site has been withdrawn for this account.",
+      },
+    }[state] || { mark: "⏳", title: "Waiting for approval", body: "" };
+
+    removeGate();
+    const el = document.createElement("div");
+    el.id = "authScreen";
+    el.innerHTML =
+      '<div class="auth-card status-card">' +
+        '<span class="lock-mark">' + copy.mark + "</span>" +
+        "<h1>" + esc(copy.title) + "</h1>" +
+        '<p class="auth-sub">' + esc(copy.body) + "</p>" +
+        (profile && profile.status_reason
+          ? '<p class="status-reason"><b>Reason:</b> ' + esc(profile.status_reason) + "</p>"
+          : "") +
+        '<p class="status-who">' + esc((user && user.email) || "") + "</p>" +
+        '<button type="button" class="btn" id="statusSignOut">Sign out</button>' +
+      "</div>";
+    document.body.appendChild(el);
+    document.getElementById("statusSignOut").addEventListener("click", async () => {
+      try { if (sb) await sb.auth.signOut(); } catch (e) {}
+      user = null; profile = null;
+      window.location.reload();
+    });
   }
 
   function closeApp(message) {
@@ -459,6 +520,15 @@
       const { data } = await sb.from("profiles").select("*").eq("id", user.id).single();
       profile = data || null;
     } catch (e) { profile = null; }
+
+    // Stop before pulling anything: an unapproved account is refused by RLS, so
+    // every pull below would fail and report a wall of errors instead of the
+    // one thing the user needs to know.
+    if (accountState() !== "approved") {
+      root.classList.add("locked");
+      buildStatusScreen();
+      return;
+    }
 
     // Merge anything ticked offline before signing in, then adopt the server set.
     const localOnly = window.ICPCProgress.snapshot();

@@ -31,9 +31,10 @@ Set it up once:
 
 1. Create a free project at [supabase.com](https://supabase.com).
 2. **SQL Editor -> New query** -> paste `supabase-schema.sql` -> **Run**. That
-   creates `profiles` and `solved_problems`, switches on Row Level Security so
-   each user can only touch their own rows, and adds a trigger that creates a
-   profile row on signup.
+   creates every table, switches on Row Level Security so each user can only
+   touch their own rows, and adds a trigger that creates a profile row on
+   signup. The file is idempotent — re-run it after pulling to pick up new
+   columns.
 3. **Project Settings -> API** -> copy the **Project URL** and the **anon
    public** key into `supabase-config.js`.
 
@@ -50,6 +51,38 @@ and nothing syncs.
 
 Note the gate protects *data*, not *source*: on a static site anyone can fetch
 `script.js` and the rest directly, so don't put secrets in this folder.
+
+## Approving accounts (Admin tab)
+
+New signups land in a **pending** queue and cannot reach any data until an admin
+approves them. The **Admin** tab appears only for admins and lets you approve,
+decline, ban, reinstate, and grant or revoke admin.
+
+The **first account created on a fresh project becomes the admin** automatically
+— otherwise nobody could approve anyone. On an existing project, re-running
+`supabase-schema.sql` grandfathers every current account to *approved* and makes
+the earliest one the admin. That backfill is tied to the moment the `status`
+column is added, so re-running the file later never approves a waiting queue.
+
+What the database enforces, regardless of what the UI does:
+
+- Data policies test `is_approved()`, so a pending, declined or banned account is
+  refused by Postgres itself. Hiding the tab is cosmetic; this is the real gate.
+- `status` and `role` are frozen by a trigger. A user cannot approve or promote
+  themselves by calling PostgREST directly, which the public anon key would
+  otherwise allow.
+- Status changes only happen through `admin_set_status()` / `admin_set_role()`,
+  which refuse non-admins, refuse self-ban and self-demotion, refuse removing the
+  last admin, and append to `moderation_log`.
+- `moderation_log` has no insert or update policy, so the audit trail cannot be
+  forged or rewritten from a browser.
+
+To make someone else an admin by hand:
+
+```sql
+update public.profiles set role = 'admin', status = 'approved'
+ where email = 'them@example.com';
+```
 
 ## Printing the notebook
 

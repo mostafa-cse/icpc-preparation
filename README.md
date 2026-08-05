@@ -116,6 +116,23 @@ What the database enforces, regardless of what the UI does:
 - `moderation_log` has no insert or update policy, so the audit trail cannot be
   forged or rewritten from a browser.
 
+### Database linter
+
+Re-running this file clears the linter's `function_search_path_mutable` and
+`anon_security_definer_function_executable` findings: every function pins
+`search_path`, and `anon` is left with execute on nothing.
+
+Five `authenticated_security_definer_function_executable` warnings remain and
+are meant to. `admin_list_users`, `admin_set_status` and `admin_set_role` are
+the admin panel's API and carry their own `is_admin()` check; `is_admin` and
+`is_approved` are called from RLS policies, which are evaluated as the querying
+role — revoke that grant and every policy using them starts failing with
+*permission denied*.
+
+One finding cannot be fixed from SQL: **Leaked Password Protection**. Turn it on
+under **Authentication -> Providers -> Password**; it checks new passwords
+against HaveIBeenPwned.
+
 To make someone an admin by hand, from the Supabase **SQL Editor**:
 
 ```sql

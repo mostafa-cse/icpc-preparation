@@ -30,6 +30,7 @@
 create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   new.updated_at = now();
@@ -156,10 +157,7 @@ as $$
   );
 $$;
 
-revoke all on function public.is_admin()    from public;
-revoke all on function public.is_approved() from public;
-grant execute on function public.is_admin()    to authenticated;
-grant execute on function public.is_approved() to authenticated;
+-- Execute privileges are set in one place, at the end of this file.
 
 alter table public.profiles enable row level security;
 
@@ -749,12 +747,7 @@ as $$
     p.created_at desc;
 $$;
 
-revoke all on function public.admin_set_status(uuid, public.account_status, text) from public;
-revoke all on function public.admin_set_role(uuid, text) from public;
-revoke all on function public.admin_list_users() from public;
-grant execute on function public.admin_set_status(uuid, public.account_status, text) to authenticated;
-grant execute on function public.admin_set_role(uuid, text) to authenticated;
-grant execute on function public.admin_list_users() to authenticated;
+-- Execute privileges are set in one place, at the end of this file.
 
 
 -- Grandfathering of pre-existing accounts happens in section 1, at the moment
@@ -767,3 +760,54 @@ update public.profiles p
    set email = u.email
   from auth.users u
  where u.id = p.id and p.email is distinct from u.email;
+
+
+-- ============================================================================
+-- 11. Execute privileges on functions
+--
+-- PostgreSQL grants EXECUTE on a new function to PUBLIC, and Supabase's default
+-- privileges additionally grant it to anon and authenticated by name. Revoking
+-- from PUBLIC alone therefore leaves the named grants in place, which is what
+-- made every function here callable at /rest/v1/rpc/... without signing in.
+--
+-- Everything is revoked first, then execute is handed back only to the roles
+-- that genuinely need it.
+-- ============================================================================
+do $$
+declare
+  fn text;
+  -- Reachable from the browser on purpose. The admin_* three carry their own
+  -- is_admin() check; the two helpers are called by RLS policies, which are
+  -- evaluated as the querying role and so need execute on them.
+  api text[] := array[
+    'public.is_admin()',
+    'public.is_approved()',
+    'public.admin_list_users()',
+    'public.admin_set_role(uuid, text)',
+    'public.admin_set_status(uuid, public.account_status, text)'
+  ];
+  -- Trigger functions. Nothing should ever call these directly; the trigger
+  -- mechanism does not consult EXECUTE when it fires them.
+  internal text[] := array[
+    'public.touch_updated_at()',
+    'public.guard_profile_privileges()',
+    'public.handle_new_user()'
+  ];
+  role_name text;
+begin
+  foreach fn in array api || internal loop
+    execute format('revoke all on function %s from public', fn);
+    foreach role_name in array array['anon', 'authenticated'] loop
+      if exists (select 1 from pg_roles where rolname = role_name) then
+        execute format('revoke all on function %s from %I', fn, role_name);
+      end if;
+    end loop;
+  end loop;
+
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then
+    foreach fn in array api loop
+      execute format('grant execute on function %s to authenticated', fn);
+    end loop;
+  end if;
+end
+$$;

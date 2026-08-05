@@ -36,6 +36,21 @@
   // nothing and the reset screen never opens.
   const ARRIVED_ON_RESET = /(^|[#&?])type=recovery(&|$)/.test(location.hash + location.search);
 
+  // Mirrors signup_domain_allowed() in supabase-schema.sql. This is the polite
+  // message, not the control: the trigger on auth.users is what actually holds,
+  // since the anon key lets anyone POST to /auth/v1/signup directly.
+  const SIGNUP_DOMAINS = ["gmail.com", "googlemail.com"];
+
+  function signupEmailProblem(email) {
+    const at = String(email || "").lastIndexOf("@");
+    if (at < 1) return "That doesn't look like an email address.";
+    const domain = email.slice(at + 1).toLowerCase();
+    if (SIGNUP_DOMAINS.indexOf(domain) === -1) {
+      return "Accounts can only be created with a Gmail address.";
+    }
+    return null;
+  }
+
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -106,7 +121,9 @@
         '<label class="auth-field auth-name" hidden>Display name' +
           '<input type="text" id="authName" autocomplete="nickname" placeholder="Mostafa"></label>' +
         '<label class="auth-field">Email' +
-          '<input type="email" id="authEmail" autocomplete="email" required placeholder="you@example.com"></label>' +
+          '<input type="email" id="authEmail" autocomplete="email" required placeholder="you@gmail.com">' +
+          '<small class="auth-hint" id="authEmailHint" hidden>Gmail addresses only. ' +
+            "You'll get a confirmation link before you can sign in.</small></label>" +
         '<label class="auth-field">Password' +
           '<input type="password" id="authPass" autocomplete="current-password" required placeholder="At least 6 characters"></label>' +
         '<p class="auth-msg" id="authMsg" role="alert"></p>' +
@@ -144,6 +161,7 @@
         mode = tab.dataset.mode;
         el.querySelectorAll(".auth-tab").forEach(t => t.classList.toggle("active", t === tab));
         nameField.hidden = mode !== "signup";
+        document.getElementById("authEmailHint").hidden = mode !== "signup";
         btn.textContent = mode === "signup" ? "Create account" : "Sign in";
         passInput.autocomplete = mode === "signup" ? "new-password" : "current-password";
         msg.textContent = "";
@@ -164,6 +182,14 @@
       msg.textContent = "";
       try {
         if (mode === "signup") {
+          const bad = signupEmailProblem(email);
+          if (bad) {
+            msg.className = "auth-msg err";
+            msg.textContent = bad;
+            btn.disabled = false;
+            btn.textContent = "Create account";
+            return;
+          }
           const { data, error } = await sb.auth.signUp({
             email, password, options: { data: { display_name: name || email.split("@")[0] } },
           });
@@ -278,6 +304,8 @@
     if (/email not confirmed/i.test(m)) return "Confirm your email first — check your inbox for the link.";
     if (/already registered/i.test(m)) return "That email already has an account. Switch to Sign in.";
     if (/password should be at least/i.test(m)) return "Password must be at least 6 characters.";
+    if (/database error saving new user|unexpected_failure/i.test(m))
+      return "Accounts can only be created with a Gmail address, and disposable addresses are not accepted.";
     if (/rate limit|too many|for security purposes/i.test(m))
       return "Too many attempts. Supabase's built-in mail is rate limited — wait a few minutes.";
     if (/same as the old|should be different/i.test(m)) return "That is already your password.";

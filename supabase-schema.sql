@@ -811,3 +811,90 @@ begin
   end if;
 end
 $$;
+
+
+-- ============================================================================
+-- 12. Signup email policy — Gmail only, no disposable addresses
+--
+-- Enforced by a trigger on auth.users, not in the browser. The anon key is
+-- public, so anyone can POST straight to /auth/v1/signup with whatever address
+-- they like; a check in account.js is a courtesy message, not a control.
+-- ============================================================================
+
+-- Addresses allowed to create an account. Gmail serves @googlemail.com as an
+-- alias of the same mailbox, so both are accepted.
+create or replace function public.signup_domain_allowed(addr text)
+returns boolean
+language sql immutable
+set search_path = public
+as $$
+  select lower(split_part(coalesce(addr, ''), '@', 2))
+         = any (array['gmail.com', 'googlemail.com']);
+$$;
+
+-- Kept even though the allow-list above already excludes every one of these:
+-- if the allow-list is ever widened, this still holds the line. Extend it by
+-- editing the array and re-running this file.
+create or replace function public.signup_domain_disposable(addr text)
+returns boolean
+language sql immutable
+set search_path = public
+as $$
+  select lower(split_part(coalesce(addr, ''), '@', 2)) = any (array[
+    'mailinator.com', 'guerrillamail.com', 'guerrillamail.info', 'sharklasers.com',
+    '10minutemail.com', '10minutemail.net', 'tempmail.com', 'temp-mail.org',
+    'throwawaymail.com', 'yopmail.com', 'yopmail.fr', 'trashmail.com',
+    'getnada.com', 'dispostable.com', 'maildrop.cc', 'mailnesia.com',
+    'fakeinbox.com', 'mintemail.com', 'spamgourmet.com', 'mytemp.email',
+    'moakt.com', 'emailondeck.com', 'tempr.email', 'discard.email',
+    'mailcatch.com', 'inboxbear.com', 'tempmailo.com', 'mohmal.com',
+    'burnermail.io', 'anonaddy.me', 'simplelogin.com', 'harakirimail.com'
+  ]);
+$$;
+
+create or replace function public.enforce_signup_email()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if new.email is null or position('@' in new.email) = 0 then
+    raise exception 'A valid email address is required.'
+      using errcode = 'check_violation';
+  end if;
+  if public.signup_domain_disposable(new.email) then
+    raise exception 'Disposable email addresses are not accepted. Use your Gmail address.'
+      using errcode = 'check_violation';
+  end if;
+  if not public.signup_domain_allowed(new.email) then
+    raise exception 'Only Gmail addresses can create an account.'
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+-- INSERT only: existing accounts on other domains keep working, and an email
+-- change is handled by Supabase's own confirmation flow.
+drop trigger if exists enforce_signup_email on auth.users;
+create trigger enforce_signup_email
+  before insert on auth.users
+  for each row execute function public.enforce_signup_email();
+
+do $$
+declare fn text; role_name text;
+begin
+  foreach fn in array array[
+    'public.signup_domain_allowed(text)',
+    'public.signup_domain_disposable(text)',
+    'public.enforce_signup_email()'
+  ] loop
+    execute format('revoke all on function %s from public', fn);
+    foreach role_name in array array['anon', 'authenticated'] loop
+      if exists (select 1 from pg_roles where rolname = role_name) then
+        execute format('revoke all on function %s from %I', fn, role_name);
+      end if;
+    end loop;
+  end loop;
+end
+$$;

@@ -45,6 +45,34 @@ If email confirmation is on (the Supabase default), new accounts must click the
 link in their inbox before signing in. Turn it off under
 **Authentication -> Providers -> Email** for instant signup.
 
+### Who may create an account
+
+Signup is restricted to **Gmail** (`@gmail.com` and its `@googlemail.com`
+alias). Disposable-mailbox domains are refused separately, so the rule still
+holds if the allow-list is ever widened.
+
+Both checks live in a `before insert` trigger on `auth.users`, not in the
+browser. The anon key is public, so anyone can POST to `/auth/v1/signup` with
+any address they like — `account.js` only repeats the rule to give a readable
+message. The domain is taken from the last `@`, so `x@gmail.com.evil.co` is
+refused.
+
+The trigger fires on insert only. Accounts that already exist on other domains
+keep working, and this also applies to **Authentication -> Users -> Add user**
+in the dashboard.
+
+To change the rule, edit `signup_domain_allowed()` (or the disposable list in
+`signup_domain_disposable()`) and re-run the file. Keep `SIGNUP_DOMAINS` in
+`account.js` in step, or the browser will reject an address the database would
+have taken.
+
+### Verifying email addresses
+
+Turn on **Authentication -> Providers -> Email -> Confirm email**. New accounts
+then have to click a link before they can sign in, and the signup form already
+tells them to expect one. Note this is separate from admin approval: a user
+confirms their address first, and an admin still has to approve them after.
+
 ### Forgot password
 
 **Forgot password?** on the sign-in card mails a reset link. Following it opens

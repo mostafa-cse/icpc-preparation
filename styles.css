@@ -1234,3 +1234,7 @@
   .pw-eye:hover { color: var(--ink); background: var(--surface-2); }
   .pw-eye.is-on { color: var(--accent); }
   .pw-eye:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .auth-hint {
+    font-family: system-ui, sans-serif; font-size: 0.72rem; text-transform: none;
+    letter-spacing: 0; color: var(--ink-faint); line-height: 1.35;
+  }

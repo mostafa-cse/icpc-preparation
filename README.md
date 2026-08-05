@@ -19,10 +19,19 @@ everything is static files and browser storage.
 | <kbd>1</kbd>–<kbd>5</kbd> | Routine · Checklist · Templates · Contests · Profile |
 | <kbd>e</kbd> / <kbd>E</kbd> | Expand / collapse every section |
 | <kbd>f</kbd> | Toggle *Flagged only* |
+| <kbd>t</kbd> / <kbd>T</kbd> | Start-pause / reset the time-box timer |
 | <kbd>?</kbd> | Show or hide the shortcut list |
 
 Shortcuts stay out of the way while you are typing in a field, and never
 override a browser shortcut (anything with Ctrl, Cmd or Alt held).
+
+## Time-box timer
+
+The ground rules say to cap yourself at 45-60 minutes on a problem before
+taking a hint. The timer in the bottom-left corner measures that: it turns
+amber at 45 minutes and red at 60, and otherwise stays out of the way. It
+stores a start timestamp rather than a running count, so reloading or closing
+the tab mid-problem neither loses nor inflates the time.
 
 ## Running it
 

@@ -1204,8 +1204,6 @@
     color: var(--ink-faint); font-weight: 600; font-size: 0.72rem;
     text-transform: uppercase; letter-spacing: 0.05em;
   }
-  .rt-pt i { font-style: normal; font-size: 0.68rem; color: var(--ink-faint); opacity: 0.75; }
-  .rt-pt-fixed { color: var(--ink); font-variant-numeric: tabular-nums; }
   input[type="time"].prayer-input {
     font: inherit; font-family: ui-monospace, monospace; font-size: 0.8rem;
     background: var(--bg); color: var(--ink); border: 1px solid var(--line);

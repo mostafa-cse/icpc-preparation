@@ -386,6 +386,7 @@
     listEl.innerHTML = "";
     if (!list.length) {
       if (contests.length) listEl.innerHTML = '<p class="empty-note">No upcoming contests for the selected platforms.</p>';
+      document.dispatchEvent(new CustomEvent("icpc:nextcontest", { detail: null }));
       return;
     }
 
@@ -452,6 +453,9 @@
       row.appendChild(actions);
       listEl.appendChild(row);
     });
+
+    // The Routine tab builds its Contest Day card backwards from this.
+    document.dispatchEvent(new CustomEvent("icpc:nextcontest", { detail: list[0] || null }));
   }
 
   function tickCountdowns() {

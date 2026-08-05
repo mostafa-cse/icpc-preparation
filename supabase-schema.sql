@@ -90,6 +90,11 @@ create table if not exists public.user_settings (
   user_id             uuid primary key references auth.users on delete cascade,
   -- Routine tab
   start_date          date,
+  -- When the training day begins, in minutes past local midnight (360 = 06:00).
+  -- Stored as a plain integer, not `time`, so it carries no timezone of its own:
+  -- the Routine tab lays every block out against the user's own wall clock.
+  day_start_min       smallint not null default 360
+                      check (day_start_min between 0 and 1439),
   -- Appearance: 'auto' follows the OS
   theme               text not null default 'auto'
                       check (theme in ('auto', 'light', 'dark')),
@@ -381,6 +386,24 @@ begin
     on conflict (user_id, problem_id) do nothing;
 
     drop table public.solved_problems;
+  end if;
+end
+$$;
+
+-- `create table if not exists` above leaves an already-created user_settings
+-- untouched, so columns added after a project was first set up need their own
+-- alter. Idempotent: re-running the whole file is always safe.
+alter table public.user_settings
+  add column if not exists day_start_min smallint not null default 360;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'user_settings_day_start_min_check'
+  ) then
+    alter table public.user_settings
+      add constraint user_settings_day_start_min_check
+      check (day_start_min between 0 and 1439);
   end if;
 end
 $$;

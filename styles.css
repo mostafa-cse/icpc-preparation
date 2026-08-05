@@ -273,10 +273,51 @@
   .sched-row:first-of-type { border-top: none; }
   .sched-time {
     font-family: ui-monospace, monospace; font-size: 0.78rem; color: var(--ink-faint);
-    white-space: nowrap; min-width: 6.6rem; font-variant-numeric: tabular-nums; padding-top: 0.05rem;
+    /* Sized for the widest row a schedule can produce ("12:05 AM ⁺¹ – 12:35 AM")
+       so every row's description starts on the same line down the card. */
+    white-space: nowrap; flex: 0 0 10.5rem; font-variant-numeric: tabular-nums; padding-top: 0.05rem;
   }
+  .sched-time b { display: block; font-weight: 600; color: var(--ink-soft); }
+  .sched-dur { display: block; font-style: normal; font-size: 0.7rem; opacity: 0.62; margin-top: 0.1rem; }
   .sched-what strong { display: block; color: var(--ink); font-weight: 600; }
   .sched-what span { color: var(--ink-soft); font-size: 0.84rem; }
+
+  /* The contest itself is the fixed point the rest of that day bends around. */
+  .sched-row.is-live { position: relative; }
+  .sched-row.is-live .sched-time b,
+  .sched-row.is-live .sched-what strong { color: var(--accent-ink); }
+  .sched-row.is-live::before {
+    content: ""; position: absolute; left: -1.25rem; top: 0; bottom: 0;
+    width: 3px; border-radius: 0 2px 2px 0; background: var(--accent);
+  }
+  .sched-card .sub.is-live { color: var(--accent-ink); }
+
+  /* Start-of-day control above the two schedule cards */
+  .daystart-bar {
+    display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+    padding: 0.7rem 1rem; margin: 1rem 0 0;
+  }
+  .daystart-bar label { font-weight: 600; color: var(--ink); font-size: 0.88rem; }
+  .daystart-note { font-size: 0.78rem; color: var(--ink-faint); }
+  input[type="time"].day-start-input {
+    font: inherit; font-family: ui-monospace, monospace; font-size: 0.85rem;
+    background: var(--bg); color: var(--ink); border: 1px solid var(--line);
+    border-radius: var(--r-sm); padding: 0.3rem 0.5rem;
+  }
+  input[type="time"].day-start-input:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+
+  /* Profile › Preferences */
+  .pf-pref {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 0.85rem 1rem;
+  }
+  .pf-pref-text strong { display: block; color: var(--ink); font-weight: 600; }
+  .pf-pref-text span { color: var(--ink-soft); font-size: 0.82rem; }
+  @media (max-width: 560px) { .pf-pref { flex-direction: column; align-items: flex-start; } }
 
   /* Contest calendar */
   .cal-wrap { overflow-x: auto; margin: 1rem 0; border: 1px solid var(--line); border-radius: 10px; }

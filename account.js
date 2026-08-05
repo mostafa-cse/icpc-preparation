@@ -299,14 +299,33 @@
     document.dispatchEvent(new CustomEvent("icpc:settings", { detail: data }));
   }
 
+  // Columns dropped by the server because supabase-schema.sql has not been
+  // re-run yet. Retried without them so one stale column cannot block the rest
+  // of a settings save; the preference still lives in localStorage either way.
+  const missingCols = new Set();
+
   async function pushSettings(patch) {
     if (!sb || !user) return;
+    const send = {};
+    for (const k of Object.keys(patch)) if (!missingCols.has(k)) send[k] = patch[k];
+    if (!Object.keys(send).length) return;
     try {
       const { error } = await sb.from(T_SETTINGS)
-        .upsert(Object.assign({ user_id: user.id }, patch), { onConflict: "user_id" });
+        .upsert(Object.assign({ user_id: user.id }, send), { onConflict: "user_id" });
       if (error) throw error;
-      settings = Object.assign(settings || {}, patch);
+      settings = Object.assign(settings || {}, send);
+      setSyncState("saved");
     } catch (err) {
+      const m = (err && err.message) || "";
+      const unknown = /Could not find the '(\w+)' column/.exec(m);
+      if (unknown && !missingCols.has(unknown[1])) {
+        missingCols.add(unknown[1]);
+        setSyncState("saved", "Saved in this browser. Re-run supabase-schema.sql to sync '" +
+          unknown[1] + "' across devices.");
+        const rest = Object.assign({}, send); delete rest[unknown[1]];
+        if (Object.keys(rest).length) return pushSettings(rest);
+        return;
+      }
       setSyncState("error", friendly(err));
     }
   }
@@ -397,6 +416,17 @@
 
       '<section class="doc-section"><h2>By training block</h2><div class="pf-list">' + rows(bd.phases) + "</div></section>" +
       '<section class="doc-section"><h2>By source file</h2><div class="pf-list">' + rows(bd.files) + "</div></section>" +
+
+      '<section class="doc-section"><h2>Preferences</h2>' +
+        '<div class="pf-pref">' +
+          '<div class="pf-pref-text">' +
+            "<strong>Start of training day</strong>" +
+            "<span>Both Routine schedules are laid out from this time. Contest Day still anchors to the real contest — this sets when the warm-up and curriculum blocks before it begin.</span>" +
+          "</div>" +
+          '<input type="time" class="day-start-input" step="900" value="' +
+            esc(window.ICPCRoutine ? window.ICPCRoutine.dayStartHHMM() : "06:00") + '">' +
+        "</div>" +
+      "</section>" +
 
       '<section class="doc-section"><h2>Your data</h2>' +
         '<p>Progress is stored against your account, so signing in on another device brings it with you. ' +

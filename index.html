@@ -52,26 +52,24 @@
 
       <section class="doc-section">
         <h2>Daily Rhythm</h2>
-        <p>Two templates. Which one you run depends on whether a contest lands that day — see the calendar below. Both assume a 12–14 hr day; times shift to fit your own clock, the block structure is what matters.</p>
+        <p>Two templates. Which one you run depends on whether a contest lands that day — see the calendar below. Both are laid out on your own clock from the start time below, and Contest Day is built backwards from the real start of the next contest on your Contests tab.</p>
+
+        <div class="daystart-bar">
+          <label for="dayStartInput">My day starts at</label>
+          <input type="time" id="dayStartInput" class="day-start-input" value="06:00" step="900">
+          <span class="daystart-note">Everything below shifts with this. Saved to your account — <span id="dayStartLabel" class="mono">6:00 AM</span></span>
+        </div>
+
         <div class="sched-grid">
           <div class="sched-card">
             <h4>Grind Day</h4>
-            <div class="sub">Mon · Tue · Thu (unless Codeforces lands)</div>
-            <div class="sched-row"><span class="sched-time">+0:00–0:30</span><div class="sched-what"><strong>Warm-up</strong><span>1–2 easy, already-comfortable problems. 15-min hard cap each — just get your hands moving.</span></div></div>
-            <div class="sched-row"><span class="sched-time">+0:30–2:30</span><div class="sched-what"><strong>Theory block</strong><span>Read the day's sub-topic, extend your own template/snippet library for it.</span></div></div>
-            <div class="sched-row"><span class="sched-time">+2:45–6:15</span><div class="sched-what"><strong>Problem block A + B</strong><span>Work today's checklist section top to bottom: easy → normal → hard tier, lunch in the middle.</span></div></div>
-            <div class="sched-row"><span class="sched-time">+6:30–8:30</span><div class="sched-what"><strong>Upsolve / backlog</strong><span>Anything unsolved from yesterday, or stuck &gt;45 min today. Editorial's allowed now — read it, close it, re-implement from a blank file.</span></div></div>
-            <div class="sched-row"><span class="sched-time">+9:00–10:00</span><div class="sched-what"><strong>Review &amp; log</strong><span>Update the tracker, write 2–3 lines on what tripped you up, flag anything to revisit in a week.</span></div></div>
+            <div class="sub" id="schedGrindSub">Mon · Tue · Thu (unless Codeforces lands)</div>
+            <div id="schedGrind"></div>
           </div>
           <div class="sched-card">
             <h4>Contest Day</h4>
-            <div class="sub">Whichever day the platform lands on — see calendar</div>
-            <div class="sched-row"><span class="sched-time">+0:00–0:30</span><div class="sched-what"><strong>Warm-up</strong><span>Same as grind day.</span></div></div>
-            <div class="sched-row"><span class="sched-time">+0:30–6:00</span><div class="sched-what"><strong>Problem blocks</strong><span>Curriculum work, same topic as the week's focus block, lunch in the middle.</span></div></div>
-            <div class="sched-row"><span class="sched-time">+6:00–6:30</span><div class="sched-what"><strong>Pre-contest reset</strong><span>Skim your template library, stretch, no new topics.</span></div></div>
-            <div class="sched-row"><span class="sched-time">contest window</span><div class="sched-what"><strong>Live contest</strong><span>Full focus, no outside help. Treat every minute like the real thing — this is where speed under pressure gets built.</span></div></div>
-            <div class="sched-row"><span class="sched-time">+2:00 after</span><div class="sched-what"><strong>Immediate upsolve</strong><span>Finish what you didn't solve live. Editorial only after your own honest attempt.</span></div></div>
-            <div class="sched-row"><span class="sched-time">+0:30</span><div class="sched-what"><strong>Log result</strong><span>Rank/rating in one line, so you can see the trend over 16 weeks.</span></div></div>
+            <div class="sub" id="schedContestSub">Whichever day the platform lands on — see calendar</div>
+            <div id="schedContest"></div>
           </div>
         </div>
       </section>
@@ -321,6 +319,7 @@
 <div id="printRoot" aria-hidden="true"></div>
 
 <script src="script.js"></script>
+<script src="routine.js"></script>
 <script src="templates.js"></script>
 <script src="contests.js"></script>
 <script src="account.js"></script>

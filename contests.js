@@ -468,12 +468,33 @@
   }
 
   // ---------- Wiring ----------
+  function pushSetting(patch) {
+    const sync = window.ICPCSettings && window.ICPCSettings.onChange;
+    if (typeof sync === "function") sync(patch);
+  }
+
   leadEl.value = String(leadMinutes);
   leadEl.addEventListener("change", () => {
     leadMinutes = parseInt(leadEl.value, 10) || 30;
     localStorage.setItem(LEAD_STORE, String(leadMinutes));
+    pushSetting({ contest_lead_min: leadMinutes });
     scheduleAll();
     render();
+  });
+
+  // Lead time and the user's own clist.by credentials come from the account.
+  document.addEventListener("icpc:settings", e => {
+    const d = e.detail || {};
+    if (d.contest_lead_min) {
+      leadMinutes = d.contest_lead_min;
+      localStorage.setItem(LEAD_STORE, String(leadMinutes));
+      leadEl.value = String(leadMinutes);
+    }
+    if (typeof d.clist_credentials === "string" && d.clist_credentials.trim()) {
+      localStorage.setItem(CLIST_STORE, d.clist_credentials.trim());
+      if (clistInput) clistInput.value = d.clist_credentials.trim();
+    }
+    if (loaded) loadContests();
   });
 
   document.querySelectorAll(".plat-toggle input").forEach(i => i.addEventListener("change", render));
@@ -485,6 +506,7 @@
   let clistTimer;
   clistInput.addEventListener("input", () => {
     localStorage.setItem(CLIST_STORE, clistInput.value.trim());
+    pushSetting({ clist_credentials: clistInput.value.trim() });
     clearTimeout(clistTimer);
     // Re-fetch once typing settles, so pasting a key takes effect without a click.
     clistTimer = setTimeout(() => { if (loaded) loadContests(); }, 900);

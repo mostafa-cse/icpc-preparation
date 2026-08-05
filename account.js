@@ -295,7 +295,8 @@
     const { data } = await sb.from(T_SETTINGS).select("*").eq("user_id", user.id).single();
     if (!data) return;
     settings = data;
-    if (window.ICPCSettings) window.ICPCSettings.apply(data);
+    // Modules own their own settings; they subscribe rather than being called.
+    document.dispatchEvent(new CustomEvent("icpc:settings", { detail: data }));
   }
 
   async function pushSettings(patch) {
@@ -431,22 +432,29 @@
 
     // Merge anything ticked offline before signing in, then adopt the server set.
     const localOnly = window.ICPCProgress.snapshot();
-    try {
-      await pullProgress();
-      if (localOnly.length) {
-        const merged = new Set([...lastSynced, ...localOnly]);
-        if (merged.size !== lastSynced.size) {
-          window.ICPCProgress.replaceAll([...merged]);
-          await pushProgress([...merged]);
+    const failures = [];
+    // Settled independently: a failure in one must not silently skip the rest,
+    // which is exactly how templates stopped loading once before.
+    for (const [name, step] of [
+      ["progress", async () => {
+        await pullProgress();
+        if (localOnly.length) {
+          const merged = new Set([...lastSynced, ...localOnly]);
+          if (merged.size !== lastSynced.size) {
+            window.ICPCProgress.replaceAll([...merged]);
+            await pushProgress([...merged]);
+          }
         }
-      }
-      await pullSettings();
-      await pullTemplates();
-    } catch (err) {
-      setSyncState("error", friendly(err));
+      }],
+      ["settings", pullSettings],
+      ["templates", pullTemplates],
+    ]) {
+      try { await step(); }
+      catch (err) { failures.push(name + " (" + friendly(err) + ")"); }
     }
     openApp();
-    setSyncState("saved");
+    if (failures.length) setSyncState("error", "Could not load: " + failures.join("; "));
+    else setSyncState("saved");
   }
 
   async function start() {

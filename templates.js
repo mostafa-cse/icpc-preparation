@@ -760,8 +760,23 @@
   const mAuthors = document.getElementById("tplMetaAuthors");
   function syncMetaInputs() { mTitle.value = meta.title || ""; mAuthors.value = meta.authors || ""; }
   syncMetaInputs();
-  mTitle.addEventListener("input", () => { meta.title = mTitle.value; persistMeta(); });
-  mAuthors.addEventListener("input", () => { meta.authors = mAuthors.value; persistMeta(); });
+  function pushMeta() {
+    const sync = window.ICPCSettings && window.ICPCSettings.onChange;
+    if (typeof sync === "function") {
+      sync({ notebook_title: meta.title || "", notebook_authors: meta.authors || "" });
+    }
+  }
+  mTitle.addEventListener("input", () => { meta.title = mTitle.value; persistMeta(); pushMeta(); });
+  mAuthors.addEventListener("input", () => { meta.authors = mAuthors.value; persistMeta(); pushMeta(); });
+
+  // Notebook cover comes back from the account on sign-in.
+  document.addEventListener("icpc:settings", e => {
+    const d = e.detail || {};
+    if (d.notebook_title != null) meta.title = d.notebook_title;
+    if (d.notebook_authors != null) meta.authors = d.notebook_authors;
+    persistMeta();
+    syncMetaInputs();
+  });
 
   render();
 })();

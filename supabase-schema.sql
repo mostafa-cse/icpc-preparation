@@ -236,6 +236,10 @@ create table if not exists public.user_settings (
   print_font_size     smallint not null default 10
                       check (print_font_size between 6 and 16),
   export_notes        boolean not null default false,
+  -- Routine tab: the user's own prayer times, as {"Fajr":"05:30",...} in local
+  -- wall-clock. These are jamaat times, not astronomical ones — the calculated
+  -- times only seed the defaults.
+  prayer_times        jsonb not null default '{}'::jsonb,
   -- Contests tab
   contest_lead_min    smallint not null default 30
                       check (contest_lead_min between 1 and 10080),
@@ -539,6 +543,9 @@ $$;
 -- alter. Idempotent: re-running the whole file is always safe.
 alter table public.user_settings
   add column if not exists day_start_min smallint not null default 360;
+
+alter table public.user_settings
+  add column if not exists prayer_times jsonb not null default '{}'::jsonb;
 
 do $$
 begin

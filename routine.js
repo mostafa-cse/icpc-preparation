@@ -30,6 +30,7 @@
   "use strict";
 
   const STORE = "icpc_day_start";
+  const PRAYER_STORE = "icpc_prayer_times";
   const DEFAULT_START = 360;      // 06:00
   const DAY_LENGTH = 1050;        // 17h30m awake, so sleep gets 6h30m
   const MIN_BLOCK = 30;           // never schedule a sliver of practice
@@ -76,7 +77,9 @@
 
   let dayStart = readStored();
   let nextContest = null;
-  let prayer = null;
+  let calculated = null;    // today's astronomical times, or null while loading
+  let overrides = readPrayerOverrides();
+  let prayer = null;        // what the schedule is actually built from
   let schedule = [];
   let tickTimer = null;
 
@@ -84,6 +87,42 @@
   function readStored() {
     const raw = parseInt(localStorage.getItem(STORE), 10);
     return Number.isFinite(raw) && raw >= 0 && raw <= 1439 ? raw : DEFAULT_START;
+  }
+
+  function readPrayerOverrides() {
+    try { return JSON.parse(localStorage.getItem(PRAYER_STORE) || "{}") || {}; }
+    catch (e) { return {}; }
+  }
+
+  // Recomputed whenever the calculated times or the user's own times change.
+  function refreshPrayer() {
+    prayer = window.ICPCPrayer
+      ? window.ICPCPrayer.effective(calculated, overrides)
+      : null;
+  }
+
+  function setPrayer(key, value, opts) {
+    const P = window.ICPCPrayer;
+    if (!P || !P.SPEC[key] || P.SPEC[key].fixed != null) return;
+    const mins = P.toMins(value);
+    if (mins == null) return;
+    overrides = Object.assign({}, overrides, { [key]: P.toHHMM(mins) });
+    localStorage.setItem(PRAYER_STORE, JSON.stringify(overrides));
+    refreshPrayer();
+    render();
+    if (!(opts && opts.silent)) {
+      const sync = window.ICPCSettings && window.ICPCSettings.onChange;
+      if (typeof sync === "function") sync({ prayer_times: overrides });
+    }
+  }
+
+  function clearPrayer() {
+    overrides = {};
+    localStorage.removeItem(PRAYER_STORE);
+    refreshPrayer();
+    render();
+    const sync = window.ICPCSettings && window.ICPCSettings.onChange;
+    if (typeof sync === "function") sync({ prayer_times: {} });
   }
 
   function esc(s) {
@@ -174,7 +213,8 @@
     //    slides to just after it rather than being drawn on top of it.
     const fajrAt = parseHHMM(p.Fajr) != null ? fromDayStart(parseHHMM(p.Fajr)) : null;
     const fajrOwn = fajrAt != null && fajrAt >= dayStart && fajrAt < dayStart + 180;
-    if (fajrOwn) placePreferEarlier(rows, fajrAt, 20, { category: "PRAYER", activity: "Fajr prayer" });
+    if (fajrOwn) placePreferEarlier(rows, fajrAt, 20,
+      { category: "PRAYER", activity: "Fajr prayer" });
 
     const prayerAt = (key, label, len, fallbackOffset) => {
       const raw = parseHHMM(p[key]);
@@ -182,10 +222,14 @@
       if (at < dayStart || at > end) at = dayStart + fallbackOffset;
       return placePreferEarlier(rows, at, len, { category: "PRAYER", activity: label });
     };
-    const dhuhr = prayerAt("Dhuhr", "Dhuhr prayer", 30, 360);
-    prayerAt("Asr", "Asr prayer", 30, 570);
-    prayerAt("Maghrib", "Maghrib prayer", 20, 735);
-    prayerAt("Isha", "Isha prayer", 30, 870);
+    // Labels come from the prayer spec so the table and the editable strip
+    // above it never disagree about what a prayer is called.
+    const named = key => ((window.ICPCPrayer && window.ICPCPrayer.SPEC[key]
+      && window.ICPCPrayer.SPEC[key].label) || key) + " prayer";
+    const dhuhr = prayerAt("Dhuhr", named("Dhuhr"), 30, 360);
+    prayerAt("Asr", named("Asr"), 30, 570);
+    prayerAt("Maghrib", named("Maghrib"), 20, 735);
+    prayerAt("Isha", named("Isha"), 30, 870);
 
     // The pre-contest reset takes whatever room is left in front of the round.
     // If a prayer already fills it, that prayer *is* the reset — better than
@@ -411,14 +455,33 @@
     const end = dayStart + DAY_LENGTH;
     const elapsed = Math.min(100, Math.max(0, Math.round(100 * (fromDayStart(now) - dayStart) / DAY_LENGTH)));
 
-    const prayerStrip = prayer
-      ? '<div class="rt-prayer">' +
-          window.ICPCPrayer.ORDER.map(k =>
-            '<span><b>' + esc(k) + "</b>" + esc(clock(parseHHMM(prayer[k]) || 0)) + "</span>").join("") +
+    const P = window.ICPCPrayer;
+    const prayerStrip = !P || !prayer
+      ? '<div class="rt-prayer is-loading"><span>Loading prayer times…</span></div>'
+      : '<div class="rt-prayer">' +
+          P.ORDER.map(k => {
+            const spec = P.SPEC[k];
+            const at = parseHHMM(prayer[k]);
+            const own = overrides[k] != null;
+            if (spec.fixed != null) {
+              return '<label class="rt-pt is-fixed"><b>' + esc(spec.label) + "</b>" +
+                '<span class="rt-pt-fixed">' + esc(clock(at)) + "</span>" +
+                '<i>fixed</i></label>';
+            }
+            return '<label class="rt-pt' + (own ? " is-set" : "") + '"><b>' + esc(spec.label) + "</b>" +
+              '<input type="time" class="prayer-input" data-prayer="' + k + '"' +
+                ' min="' + esc(P.toHHMM(spec.min)) + '" max="' + esc(P.toHHMM(spec.max)) + '"' +
+                ' step="300" value="' + esc(prayer[k]) + '">' +
+              "<i>" + esc(clock(spec.min)) + "–" + esc(clock(spec.max)) + "</i></label>";
+          }).join("") +
           '<span class="rt-prayer-src">' +
-            (prayer.estimated ? "estimated — location unavailable" : esc(prayer.place || "")) + "</span>" +
-        "</div>"
-      : '<div class="rt-prayer is-loading"><span>Loading prayer times…</span></div>';
+            (Object.keys(overrides).length
+              ? '<button type="button" id="prayerReset" class="rt-linkbtn">Use calculated times</button>'
+              : calculated
+                ? (calculated.estimated ? "calculated — location unavailable" : esc(calculated.place || ""))
+                : "") +
+          "</span>" +
+        "</div>";
 
     host.innerHTML =
       '<div class="rt-head">' +
@@ -455,6 +518,18 @@
         "<thead><tr><th>Time</th><th>Category</th><th>Activity</th><th>Duration</th><th>Status</th><th>Progress</th></tr></thead>" +
         "<tbody>" + schedule.map(b => rowHtml(b, fromDayStart(now))).join("") + "</tbody>" +
       "</table></div>";
+
+    wirePrayer();
+  }
+
+  function wirePrayer() {
+    document.querySelectorAll(".prayer-input").forEach(el => {
+      // `change` rather than `input`: a half-typed hour would otherwise clamp
+      // to the window edge and fight the user mid-edit.
+      el.addEventListener("change", () => setPrayer(el.dataset.prayer, el.value));
+    });
+    const reset = document.getElementById("prayerReset");
+    if (reset) reset.addEventListener("click", clearPrayer);
   }
 
   // Repaint only the volatile parts each minute; rebuilding the whole table
@@ -495,6 +570,12 @@
   document.addEventListener("icpc:settings", e => {
     const d = e.detail || {};
     if (d.day_start_min != null) setDayStart(d.day_start_min, { silent: true });
+    if (d.prayer_times && typeof d.prayer_times === "object") {
+      overrides = d.prayer_times;
+      localStorage.setItem(PRAYER_STORE, JSON.stringify(overrides));
+      refreshPrayer();
+      render();
+    }
   });
 
   document.addEventListener("icpc:nextcontest", e => {
@@ -512,6 +593,9 @@
 
   window.ICPCRoutine = {
     setDayStart,
+    setPrayer,
+    clearPrayer,
+    prayerTimes: () => Object.assign({}, prayer),
     dayStart: () => dayStart,
     dayStartHHMM: () => hhmm(dayStart),
     schedule: () => schedule.slice(),
@@ -519,11 +603,14 @@
   };
 
   function boot() {
+    refreshPrayer();
     render();
     clearInterval(tickTimer);
     tickTimer = setInterval(tick, 30000);
     if (window.ICPCPrayer) {
-      window.ICPCPrayer.load().then(t => { prayer = t; render(); }).catch(() => {});
+      window.ICPCPrayer.load()
+        .then(t => { calculated = t; refreshPrayer(); render(); })
+        .catch(() => {});
     }
   }
 

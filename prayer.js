@@ -29,6 +29,54 @@
 
   const ORDER = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
+  // The times the schedule actually runs on are jamaat times, not astronomical
+  // ones — you pray when the mosque prays, which is why Zuhr sits at 1:30pm and
+  // not at the calculated 12:09. Each prayer therefore has a window it is
+  // allowed to fall in; two of them do not move at all.
+  const SPEC = {
+    Fajr:    { label: "Fajr",    min: 5 * 60,  max: 6 * 60 },
+    Dhuhr:   { label: "Zuhr",    fixed: 13 * 60 + 30 },
+    Asr:     { label: "Asr",     min: 16 * 60, max: 17 * 60 },
+    Maghrib: { label: "Maghrib", min: 18 * 60, max: 19 * 60 },
+    Isha:    { label: "Isha",    fixed: 20 * 60 },
+  };
+
+  function toMins(s) {
+    const m = /^(\d{1,2}):(\d{2})/.exec(String(s || ""));
+    return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null;
+  }
+
+  function toHHMM(min) {
+    return String(Math.floor(min / 60)).padStart(2, "0") + ":" + String(min % 60).padStart(2, "0");
+  }
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  /*
+   * The times the routine is built from.
+   *
+   *   fixed prayers  -> always their fixed time, whatever anyone says
+   *   ranged prayers -> the user's own value if they set one, otherwise today's
+   *                     calculated time pulled into the window, so Maghrib
+   *                     still tracks sunset across the season without ever
+   *                     leaving 6–7pm
+   */
+  function effective(calculated, overrides) {
+    const out = {};
+    ORDER.forEach(key => {
+      const spec = SPEC[key];
+      if (spec.fixed != null) { out[key] = toHHMM(spec.fixed); return; }
+
+      const own = toMins(overrides && overrides[key]);
+      if (own != null) { out[key] = toHHMM(clamp(own, spec.min, spec.max)); return; }
+
+      const calc = toMins(calculated && calculated[key]);
+      out[key] = toHHMM(calc != null ? clamp(calc, spec.min, spec.max)
+                                     : Math.round((spec.min + spec.max) / 2));
+    });
+    return out;
+  }
+
   function todayKey() {
     const d = new Date();
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") +
@@ -117,5 +165,5 @@
     return inflight;
   }
 
-  window.ICPCPrayer = { load, ORDER, FALLBACK: FALLBACK_TIMES };
+  window.ICPCPrayer = { load, ORDER, SPEC, effective, toMins, toHHMM, FALLBACK: FALLBACK_TIMES };
 })();

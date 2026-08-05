@@ -52,6 +52,29 @@ and nothing syncs.
 Note the gate protects *data*, not *source*: on a static site anyone can fetch
 `script.js` and the rest directly, so don't put secrets in this folder.
 
+## Prayer times
+
+The Routine tab builds the day around prayer times, which are **jamaat times,
+not astronomical ones** — you pray when the mosque prays. Each prayer has a
+window it must fall in, and two do not move at all:
+
+| Prayer  | Allowed | Editable |
+|---------|---------|----------|
+| Fajr    | 5:00–6:00 am | yes |
+| Zuhr    | 1:30 pm | no — fixed |
+| Asr     | 4:00–5:00 pm | yes |
+| Maghrib | 6:00–7:00 pm | yes |
+| Isha    | 8:00 pm | no — fixed |
+
+Editable prayers default to today's calculated time pulled into the window, so
+Maghrib still tracks sunset across the season without ever leaving 6–7 pm. Set
+your own and it sticks; **Use calculated times** clears the overrides. Anything
+outside a window is clamped to it. Changing a time rebuilds the whole schedule.
+
+Calculated times come from `api.aladhan.com` (Karachi method, Hanafi Asr), via
+browser location then an IP lookup, cached per day. If every lookup fails the
+windows alone still produce a working schedule.
+
 ## Approving accounts (Admin tab)
 
 New signups land in a **pending** queue and cannot reach any data until an admin

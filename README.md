@@ -6,9 +6,23 @@ everything is static files and browser storage.
 ## What's in it
 
 - **Routine** — the 16-week plan: daily rhythm, weekly contest calendar, and 10 training blocks with live progress bars.
-- **Checklist** — 4,427 unique problems across 504 sections, parsed from five source files. Tick problems off; progress is stored in your browser.
+- **Checklist** — 4,427 unique problems across 504 sections, parsed from five source files. Click to tick one off; **right-click or Alt+click to flag it for revision**, then filter to *Flagged only* to get the revision queue the plan keeps referring to. Combine it with *Hide solved* for "flagged and still unsolved".
 - **Templates** — an onsite-contest notebook. Store C++ templates with description and complexity, then export the library as LaTeX, Markdown, a single `.cpp`, JSON, or print straight to PDF. Each entry carries a `[N lines] - hash` signature (MD5 of the comment- and whitespace-stripped code) so you can retype a template at a contest and verify you typed it correctly.
 - **Contests** — the next upcoming round across Codeforces, CodeChef, AtCoder and LeetCode, with a countdown, browser reminders, and `.ics` calendar export.
+
+## Keyboard
+
+| Key | Does |
+|-----|------|
+| <kbd>/</kbd> or <kbd>s</kbd> | Jump to Checklist and focus the search box |
+| <kbd>Esc</kbd> | Clear the search and leave the box |
+| <kbd>1</kbd>–<kbd>5</kbd> | Routine · Checklist · Templates · Contests · Profile |
+| <kbd>e</kbd> / <kbd>E</kbd> | Expand / collapse every section |
+| <kbd>f</kbd> | Toggle *Flagged only* |
+| <kbd>?</kbd> | Show or hide the shortcut list |
+
+Shortcuts stay out of the way while you are typing in a field, and never
+override a browser shortcut (anything with Ctrl, Cmd or Alt held).
 
 ## Running it
 

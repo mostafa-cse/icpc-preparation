@@ -1236,3 +1236,32 @@
     font-family: system-ui, sans-serif; font-size: 0.72rem; text-transform: none;
     letter-spacing: 0; color: var(--ink-faint); line-height: 1.35;
   }
+
+  /* Flagged for revision */
+  .chip.flagged { border-left-color: var(--warn); }
+  .chip.flagged .lbl::before {
+    content: "\2691"; margin-right: 0.25rem; color: var(--warn); font-size: 0.78rem;
+  }
+  .chip.flagged.solved .lbl::before { opacity: 0.7; }
+  .chk-count { color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+
+  /* Keyboard help */
+  .key-hint { font-size: 0.74rem; color: var(--ink-faint); }
+  kbd {
+    font-family: ui-monospace, monospace; font-size: 0.72rem; padding: 0.05rem 0.3rem;
+    border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px;
+    background: var(--surface-2); color: var(--ink-soft);
+  }
+  .key-help {
+    position: fixed; right: 1.2rem; bottom: 1.2rem; z-index: 60; max-width: 24rem;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+    box-shadow: var(--shadow-md); padding: 1rem 1.1rem;
+  }
+  .key-help h3 {
+    font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: 0.06em;
+    font-size: 0.8rem; margin: 0 0 0.6rem; color: var(--accent-ink);
+  }
+  .key-help dl { display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 0.8rem; margin: 0; font-size: 0.82rem; }
+  .key-help dt { white-space: nowrap; }
+  .key-help dd { margin: 0; color: var(--ink-soft); }
+  .key-help p { margin: 0.7rem 0 0; font-size: 0.78rem; color: var(--ink-faint); }

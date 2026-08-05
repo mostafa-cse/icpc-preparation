@@ -89,16 +89,27 @@
   // localStorage is only an offline mirror; the account's rows in Supabase are
   // the source of truth. account.js swaps this out on sign-in / sign-out.
   const CACHE_KEY = "icpc_solved";
+  const FLAG_KEY = "icpc_flagged";
   let solved = new Set();
+  // Problems to come back to. The plan tells you to "revisit everything you
+  // flagged" and to practise against "your own flagged list from weeks 1-14",
+  // so this is the list it means. Independent of `solved`: the ones worth
+  // revisiting are usually the ones you did solve, but only barely.
+  let flagged = new Set();
   try { solved = new Set(JSON.parse(localStorage.getItem(CACHE_KEY) || "[]")); } catch (e) {}
-  function persistLocal() { localStorage.setItem(CACHE_KEY, JSON.stringify([...solved])); }
+  try { flagged = new Set(JSON.parse(localStorage.getItem(FLAG_KEY) || "[]")); } catch (e) {}
+
+  function persistLocal() {
+    localStorage.setItem(CACHE_KEY, JSON.stringify([...solved]));
+    localStorage.setItem(FLAG_KEY, JSON.stringify([...flagged]));
+  }
   function persist() {
     persistLocal();
     const sync = window.ICPCProgress && window.ICPCProgress.onChange;
-    if (typeof sync === "function") sync([...solved]);
+    if (typeof sync === "function") sync([...solved], [...flagged]);
   }
 
-  let filters = { text: "", file: "", phase: "", hideSolved: false, deepOnly: false };
+  let filters = { text: "", file: "", phase: "", hideSolved: false, deepOnly: false, flaggedOnly: false };
 
   // ---------- Counting ----------
   function countSet(idSet) {
@@ -200,16 +211,35 @@
   function updateChipsForId(id) {
     const arr = chipRegistry.get(id);
     if (!arr) return;
-    const isSolved = solved.has(id);
-    arr.forEach(c => c.classList.toggle("solved", isSolved));
+    const isSolved = solved.has(id), isFlagged = flagged.has(id);
+    arr.forEach(c => {
+      c.classList.toggle("solved", isSolved);
+      c.classList.toggle("flagged", isFlagged);
+    });
   }
   function refreshAllChipVisuals() {
     chipRegistry.forEach((elements, id) => {
-      const isSolved = solved.has(id);
-      elements.forEach(c => c.classList.toggle("solved", isSolved));
+      const isSolved = solved.has(id), isFlagged = flagged.has(id);
+      elements.forEach(c => {
+        c.classList.toggle("solved", isSolved);
+        c.classList.toggle("flagged", isFlagged);
+      });
     });
   }
+  function toggleFlag(id) {
+    if (flagged.has(id)) flagged.delete(id); else flagged.add(id);
+    persist();
+    updateChipsForId(id);
+    refreshCounters();
+  }
+
+  function renderFlagCount() {
+    const fc = document.getElementById("flagCount");
+    if (fc) fc.textContent = flagged.size ? "(" + flagged.size + ")" : "";
+  }
+
   function refreshCounters() {
+    renderFlagCount();
     renderDashboard();
     renderBlocks();
     updateFileAndSectionCounters();
@@ -223,6 +253,7 @@
   function itemMatchesFilters(it) {
     if (filters.hideSolved && solved.has(it.id)) return false;
     if (filters.deepOnly && !it.deepCut) return false;
+    if (filters.flaggedOnly && !flagged.has(it.id)) return false;
     if (filters.text) {
       const t = filters.text.toLowerCase();
       const hay = (it.id + " " + (it.label || "")).toLowerCase();
@@ -242,8 +273,8 @@
       const visibleSecs = [];
       secs.forEach(sec => {
         const items = sec._items2.filter(itemMatchesFilters);
-        if (items.length === 0 && (filters.text || filters.hideSolved || filters.deepOnly)) return;
-        visibleSecs.push({ sec, items: filters.text || filters.hideSolved || filters.deepOnly ? items : sec._items2 });
+        if (items.length === 0 && (filters.text || filters.hideSolved || filters.deepOnly || filters.flaggedOnly)) return;
+        visibleSecs.push({ sec, items: filters.text || filters.hideSolved || filters.deepOnly || filters.flaggedOnly ? items : sec._items2 });
       });
       if (visibleSecs.length === 0) return;
       anySectionVisible = true;
@@ -267,7 +298,7 @@
         card.className = "sec-card";
         card.dataset.secId = sec._id;
         card._sec = sec;
-        const forceOpen = !!(filters.text || filters.hideSolved || filters.deepOnly);
+        const forceOpen = !!(filters.text || filters.hideSolved || filters.deepOnly || filters.flaggedOnly);
         if (forceOpen || openSecIds.has(sec._id)) card.classList.add("open");
 
         const head = document.createElement("div");
@@ -301,19 +332,26 @@
         grid.className = "chip-grid";
         items.forEach(it => {
           const chip = document.createElement("span");
-          chip.className = "chip" + (solved.has(it.id) ? " solved" : "") + (it.deepCut ? " deep" : "") +
+          chip.className = "chip" + (solved.has(it.id) ? " solved" : "") +
+            (flagged.has(it.id) ? " flagged" : "") + (it.deepCut ? " deep" : "") +
             (it.difficulty === "Easy" || it.difficulty === "Very Easy" ? " diff-easy" : "") +
             (it.difficulty === "Hard" || it.difficulty === "Very Hard" || it.difficulty === "Insane" ? " diff-hard" : "");
           chip.dataset.id = it.id;
           if (it.note) chip.title = it.note;
           const label = it.kind === "link" ? (it.label || it.id) : displayId(it.id);
           chip.innerHTML = `<span class="lbl">${esc(label)}</span><a class="go" href="${esc(linkFor(it))}" target="_blank" rel="noopener noreferrer" title="Open problem">↗</a>`;
-          chip.querySelector(".lbl").addEventListener("click", () => {
+          const lbl = chip.querySelector(".lbl");
+          lbl.title = "Click to mark solved - right-click or Alt+click to flag for revision";
+          lbl.addEventListener("click", e => {
+            // Alt+click flags instead, for trackpads and anyone who would
+            // rather not reach for the context menu.
+            if (e.altKey) { toggleFlag(it.id); return; }
             if (solved.has(it.id)) solved.delete(it.id); else solved.add(it.id);
             persist();
             updateChipsForId(it.id);
             refreshCounters();
           });
+          lbl.addEventListener("contextmenu", e => { e.preventDefault(); toggleFlag(it.id); });
           grid.appendChild(chip);
           if (!chipRegistry.has(it.id)) chipRegistry.set(it.id, []);
           chipRegistry.get(it.id).push(chip);
@@ -353,7 +391,7 @@
   }
 
   function expandMatching() {
-    if (filters.text || filters.hideSolved || filters.deepOnly) {
+    if (filters.text || filters.hideSolved || filters.deepOnly || filters.flaggedOnly) {
       document.querySelectorAll(".sec-card").forEach(c => c.classList.add("open"));
     }
   }
@@ -364,6 +402,7 @@
   }
 
   function refreshAll() {
+    renderFlagCount();
     renderDashboard();
     renderBlocks();
     buildAccordions();
@@ -375,11 +414,13 @@
   const phaseSelect = document.getElementById("phaseSelect");
   PHASES.forEach(p => { const o = document.createElement("option"); o.value = String(p.id); o.textContent = (p.id+1)+". "+p.name; phaseSelect.appendChild(o); });
 
-  document.getElementById("searchBox").addEventListener("input", e => { filters.text = e.target.value.trim(); applyFilters(); });
+  const searchBox = document.getElementById("searchBox");
+  searchBox.addEventListener("input", e => { filters.text = e.target.value.trim(); applyFilters(); });
   fileSelect.addEventListener("change", e => { filters.file = e.target.value; applyFilters(); });
   phaseSelect.addEventListener("change", e => { filters.phase = e.target.value; applyFilters(); });
   document.getElementById("hideSolved").addEventListener("change", e => { filters.hideSolved = e.target.checked; applyFilters(); });
   document.getElementById("deepOnly").addEventListener("change", e => { filters.deepOnly = e.target.checked; applyFilters(); });
+  document.getElementById("flaggedOnly").addEventListener("change", e => { filters.flaggedOnly = e.target.checked; applyFilters(); });
   document.getElementById("expandAllBtn").addEventListener("click", () => document.querySelectorAll(".sec-card").forEach(c => c.classList.add("open")));
   document.getElementById("collapseAllBtn").addEventListener("click", () => document.querySelectorAll(".sec-card").forEach(c => c.classList.remove("open")));
 
@@ -426,13 +467,17 @@
     reader.readAsText(file);
   });
   twoStepConfirm(document.getElementById("resetBtn"), "Reset all", "Click again to confirm", () => {
-    solved = new Set(); persist(); refreshAllChipVisuals(); refreshCounters();
+    solved = new Set(); flagged = new Set(); persist(); refreshAllChipVisuals(); refreshCounters();
   });
 
   // ---------- Tabs ----------
   function activateTab(name) {
     document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
     document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === "panel-" + name));
+    // Panels that summarise data owned elsewhere are drawn once and then go
+    // stale — Profile reported 0 solved all day until the page was reloaded.
+    // Announcing the switch lets each panel refresh itself on the way in.
+    document.dispatchEvent(new CustomEvent("icpc:tab", { detail: name }));
   }
   document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => activateTab(t.dataset.tab)));
 
@@ -494,17 +539,20 @@
   // ---------- Progress API (consumed by account.js for Supabase sync) ----------
   window.ICPCProgress = Object.assign(window.ICPCProgress || {}, {
     snapshot: () => [...solved],
+    flagSnapshot: () => [...flagged],
     total: () => allIds.size,
     // Replace local state from the server without echoing back a write.
-    replaceAll(ids) {
+    replaceAll(ids, flags) {
       solved = new Set(ids || []);
+      if (flags) flagged = new Set(flags);
       persistLocal();
       refreshAllChipVisuals();
       refreshCounters();
     },
     clearLocal() {
       solved = new Set();
-      try { localStorage.removeItem(CACHE_KEY); } catch (e) {}
+      flagged = new Set();
+      try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(FLAG_KEY); } catch (e) {}
       refreshAllChipVisuals();
       refreshCounters();
     },
@@ -521,6 +569,66 @@
         })),
       };
     },
+  });
+
+  // ---------- Keyboard ----------
+  // 4,427 problems is a lot of mouse travel. These are the moves made dozens of
+  // times a day: jump to a tab, get to the search box, clear it again.
+  const TAB_KEYS = { "1": "routine", "2": "checklist", "3": "templates", "4": "contests", "5": "profile" };
+
+  function typingInto(el) {
+    if (!el) return false;
+    const tag = el.tagName;
+    return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
+  }
+
+  document.addEventListener("keydown", e => {
+    // Never steal a browser or OS shortcut.
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    // The gate is a separate screen; leave it alone.
+    if (document.documentElement.classList.contains("locked")) return;
+
+    const active = document.activeElement;
+
+    if (e.key === "Escape" && active === searchBox) {
+      if (searchBox.value) { searchBox.value = ""; filters.text = ""; applyFilters(); }
+      searchBox.blur();
+      return;
+    }
+    if (typingInto(active)) return;
+
+    // "/" is the search shortcut everywhere else; make it work here too.
+    if (e.key === "/" || e.key === "s") {
+      e.preventDefault();
+      activateTab("checklist");
+      searchBox.focus();
+      searchBox.select();
+      return;
+    }
+    if (TAB_KEYS[e.key]) {
+      const tab = document.querySelector('.tab[data-tab="' + TAB_KEYS[e.key] + '"]');
+      if (tab && !tab.hidden) { e.preventDefault(); activateTab(TAB_KEYS[e.key]); }
+      return;
+    }
+    if (e.key === "e" || e.key === "E") {
+      e.preventDefault();
+      activateTab("checklist");
+      document.getElementById(e.key === "e" ? "expandAllBtn" : "collapseAllBtn").click();
+      return;
+    }
+    if (e.key === "f" || e.key === "F") {
+      e.preventDefault();
+      activateTab("checklist");
+      const box = document.getElementById("flaggedOnly");
+      box.checked = !box.checked;
+      box.dispatchEvent(new Event("change"));
+      return;
+    }
+    if (e.key === "?") {
+      e.preventDefault();
+      const help = document.getElementById("keyHelp");
+      if (help) help.hidden = !help.hidden;
+    }
   });
 
   // ---------- Init ----------

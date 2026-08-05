@@ -25,6 +25,7 @@
   let user = null;          // current auth user
   let profile = null;       // row from public.profiles
   let lastSynced = new Set();
+  let lastFlags = new Set();
   let syncTimer = null;
   let tplTimer = null;
   let settings = null;
@@ -396,36 +397,56 @@
   async function pullProgress() {
     if (!sb || !user) return;
     const rows = [];
+    const flags = [];
     const PAGE = 1000;
     for (let from = 0; ; from += PAGE) {
+      // `flagged` is selected defensively: a project that has not re-run
+      // supabase-schema.sql since flags were added has no such column, and
+      // asking for it by name would fail the whole pull.
       const { data, error } = await sb
-        .from(T_PROGRESS).select("problem_id")
+        .from(T_PROGRESS).select("*")
         .eq("user_id", user.id)
         .eq("status", "solved")
         .range(from, from + PAGE - 1);
       if (error) throw error;
-      rows.push(...data.map(r => r.problem_id));
+      data.forEach(r => {
+        rows.push(r.problem_id);
+        if (r.flagged) flags.push(r.problem_id);
+      });
       if (data.length < PAGE) break;
     }
     lastSynced = new Set(rows);
-    window.ICPCProgress.replaceAll(rows);
+    lastFlags = new Set(flags);
+    window.ICPCProgress.replaceAll(rows, flags);
   }
 
   // Diff against the last synced snapshot so a toggle costs one small request.
-  async function pushProgress(ids) {
+  async function pushProgress(ids, flags) {
     if (!sb || !user) return;
     const now = new Set(ids);
+    const nowFlags = new Set(flags || lastFlags);
     const added = [...now].filter(id => !lastSynced.has(id));
     const removed = [...lastSynced].filter(id => !now.has(id));
-    if (!added.length && !removed.length) return;
+    // A flag can move without the solved set moving at all, so changed flags
+    // are re-upserted even when `added` is empty.
+    const flagMoved = [...new Set([...nowFlags, ...lastFlags])]
+      .filter(id => nowFlags.has(id) !== lastFlags.has(id) && now.has(id));
+    if (!added.length && !removed.length && !flagMoved.length) return;
 
     setSyncState("saving");
     try {
-      if (added.length) {
-        for (let i = 0; i < added.length; i += 500) {
-          const chunk = added.slice(i, i + 500)
-            .map(problem_id => ({ user_id: user.id, problem_id, status: "solved" }));
-          const { error } = await sb.from(T_PROGRESS).upsert(chunk, { onConflict: "user_id,problem_id" });
+      const toWrite = [...new Set(added.concat(flagMoved))];
+      if (toWrite.length) {
+        for (let i = 0; i < toWrite.length; i += 500) {
+          const chunk = toWrite.slice(i, i + 500)
+            .map(problem_id => ({ user_id: user.id, problem_id, status: "solved", flagged: nowFlags.has(problem_id) }));
+          let { error } = await sb.from(T_PROGRESS).upsert(chunk, { onConflict: "user_id,problem_id" });
+          if (error && /column .*flagged/i.test(error.message || "")) {
+            // Schema predates flags: save the solved state and keep the flags
+            // in this browser rather than losing the whole write.
+            const bare = chunk.map(r => ({ user_id: r.user_id, problem_id: r.problem_id, status: r.status }));
+            ({ error } = await sb.from(T_PROGRESS).upsert(bare, { onConflict: "user_id,problem_id" }));
+          }
           if (error) throw error;
         }
       }
@@ -438,6 +459,7 @@
         }
       }
       lastSynced = now;
+      lastFlags = nowFlags;
       setSyncState("saved");
       renderProfile();
     } catch (err) {
@@ -540,10 +562,10 @@
     }
   }
 
-  function scheduleSync(ids) {
+  function scheduleSync(ids, flags) {
     clearTimeout(syncTimer);
     setSyncState("pending");
-    syncTimer = setTimeout(() => pushProgress(ids), 700);
+    syncTimer = setTimeout(() => pushProgress(ids, flags), 700);
   }
 
   function setSyncState(state, detail) {
@@ -696,7 +718,7 @@
 
   async function signOut() {
     clearTimeout(syncTimer);
-    if (syncTimer) await pushProgress(window.ICPCProgress.snapshot());
+    if (syncTimer) await pushProgress(window.ICPCProgress.snapshot(), window.ICPCProgress.flagSnapshot());
     try { if (sb) await sb.auth.signOut(); } catch (e) {}
     user = null; profile = null; lastSynced = new Set();
     window.ICPCProgress.clearLocal();
@@ -722,17 +744,19 @@
 
     // Merge anything ticked offline before signing in, then adopt the server set.
     const localOnly = window.ICPCProgress.snapshot();
+    const localFlags = window.ICPCProgress.flagSnapshot();
     const failures = [];
     // Settled independently: a failure in one must not silently skip the rest,
     // which is exactly how templates stopped loading once before.
     for (const [name, step] of [
       ["progress", async () => {
         await pullProgress();
-        if (localOnly.length) {
+        if (localOnly.length || localFlags.length) {
           const merged = new Set([...lastSynced, ...localOnly]);
-          if (merged.size !== lastSynced.size) {
-            window.ICPCProgress.replaceAll([...merged]);
-            await pushProgress([...merged]);
+          const mergedFlags = new Set([...lastFlags, ...localFlags]);
+          if (merged.size !== lastSynced.size || mergedFlags.size !== lastFlags.size) {
+            window.ICPCProgress.replaceAll([...merged], [...mergedFlags]);
+            await pushProgress([...merged], [...mergedFlags]);
           }
         }
       }],
@@ -752,7 +776,7 @@
     offline = !(url && key && window.supabase);
 
     window.ICPCProgress = Object.assign(window.ICPCProgress || {}, {
-      onChange(ids) { if (!offline && user) scheduleSync(ids); },
+      onChange(ids, flags) { if (!offline && user) scheduleSync(ids, flags); },
     });
     window.ICPCTemplates = Object.assign(window.ICPCTemplates || {}, {
       onChange(list) {
@@ -802,6 +826,14 @@
     isOffline: () => offline,
     currentUser: () => user,
   };
+
+  // Profile summarises the checklist, which changes constantly on another tab.
+  // Redraw on the way in rather than trusting the copy made at sign-in.
+  document.addEventListener("icpc:tab", e => {
+    if (e.detail === "profile") renderProfile();
+    if (e.detail === "admin" && isAdmin() && window.ICPCAdmin) window.ICPCAdmin.attach(sb, user);
+  });
+
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();

@@ -296,6 +296,9 @@ create table if not exists public.problem_progress (
   user_id     uuid not null references auth.users on delete cascade,
   problem_id  text not null check (length(problem_id) between 1 and 128),
   status      public.problem_status not null default 'solved',
+  -- Marked to come back to. Separate from status because the problems worth
+  -- revisiting are usually ones you did solve, only barely.
+  flagged     boolean not null default false,
   note        text,
   solved_at   timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
@@ -554,6 +557,12 @@ alter table public.user_settings
 
 alter table public.user_settings
   add column if not exists prayer_times jsonb not null default '{}'::jsonb;
+
+alter table public.problem_progress
+  add column if not exists flagged boolean not null default false;
+
+create index if not exists problem_progress_flagged_idx
+  on public.problem_progress (user_id) where flagged;
 
 do $$
 begin

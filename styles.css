@@ -253,72 +253,6 @@
   }
   .callout strong { color: var(--ink); }
 
-  /* Daily schedule table */
-  .sched-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; margin: 1rem 0; }
-  @media (max-width: 720px) { .sched-grid { grid-template-columns: 1fr; } }
-  .sched-card {
-    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
-    padding: 1.15rem 1.25rem; box-shadow: var(--shadow-sm);
-    transition: box-shadow var(--t-med) var(--ease), transform var(--t-med) var(--ease);
-  }
-  .sched-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
-  .sched-card h4 {
-    font-family: 'Oswald', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
-    font-size: 0.95rem; margin: 0 0 0.15rem; color: var(--accent-ink);
-  }
-  .sched-card .sub { font-size: 0.78rem; color: var(--ink-faint); margin-bottom: 0.8rem; }
-  .sched-row {
-    display: flex; gap: 0.7rem; padding: 0.45rem 0; border-top: 1px solid var(--line); font-size: 0.87rem;
-  }
-  .sched-row:first-of-type { border-top: none; }
-  .sched-time {
-    font-family: ui-monospace, monospace; font-size: 0.78rem; color: var(--ink-faint);
-    /* Sized for the widest row a schedule can produce ("12:05 AM ⁺¹ – 12:35 AM")
-       so every row's description starts on the same line down the card. */
-    white-space: nowrap; flex: 0 0 10.5rem; font-variant-numeric: tabular-nums; padding-top: 0.05rem;
-  }
-  .sched-time b { display: block; font-weight: 600; color: var(--ink-soft); }
-  .sched-dur { display: block; font-style: normal; font-size: 0.7rem; opacity: 0.62; margin-top: 0.1rem; }
-  .sched-what strong { display: block; color: var(--ink); font-weight: 600; }
-  .sched-what span { color: var(--ink-soft); font-size: 0.84rem; }
-
-  /* The contest itself is the fixed point the rest of that day bends around. */
-  .sched-row.is-live { position: relative; }
-  .sched-row.is-live .sched-time b,
-  .sched-row.is-live .sched-what strong { color: var(--accent-ink); }
-  .sched-row.is-live::before {
-    content: ""; position: absolute; left: -1.25rem; top: 0; bottom: 0;
-    width: 3px; border-radius: 0 2px 2px 0; background: var(--accent);
-  }
-  .sched-card .sub.is-live { color: var(--accent-ink); }
-
-  /* Start-of-day control above the two schedule cards */
-  .daystart-bar {
-    display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
-    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
-    padding: 0.7rem 1rem; margin: 1rem 0 0;
-  }
-  .daystart-bar label { font-weight: 600; color: var(--ink); font-size: 0.88rem; }
-  .daystart-note { font-size: 0.78rem; color: var(--ink-faint); }
-  input[type="time"].day-start-input {
-    font: inherit; font-family: ui-monospace, monospace; font-size: 0.85rem;
-    background: var(--bg); color: var(--ink); border: 1px solid var(--line);
-    border-radius: var(--r-sm); padding: 0.3rem 0.5rem;
-  }
-  input[type="time"].day-start-input:focus-visible {
-    outline: 2px solid var(--accent); outline-offset: 1px;
-  }
-
-  /* Profile › Preferences */
-  .pf-pref {
-    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-    background: var(--surface); border: 1px solid var(--line);
-    border-radius: var(--r-lg); padding: 0.85rem 1rem;
-  }
-  .pf-pref-text strong { display: block; color: var(--ink); font-weight: 600; }
-  .pf-pref-text span { color: var(--ink-soft); font-size: 0.82rem; }
-  @media (max-width: 560px) { .pf-pref { flex-direction: column; align-items: flex-start; } }
-
   /* Contest calendar */
   .cal-wrap { overflow-x: auto; margin: 1rem 0; border: 1px solid var(--line); border-radius: 10px; }
   table.cal { border-collapse: collapse; width: 100%; min-width: 640px; background: var(--surface); }
@@ -1146,3 +1080,120 @@
     padding: 0.6rem 0.8rem; font-size: 0.85rem; color: var(--ink-soft); margin: 0.2rem 0 0;
   }
   .status-who { font-size: 0.8rem; color: var(--ink-faint); margin: 0.6rem 0 0; }
+
+  /* -------------------------------------------------------------- Routine -- */
+  .rt-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .rt-head h2 { margin: 0 0 0.2rem; }
+  .rt-sub { margin: 0; color: var(--ink-soft); font-size: 0.85rem; max-width: 58ch; }
+  .rt-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .rt-badge {
+    font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em;
+    border: 1px solid var(--line); border-radius: 999px; padding: 0.22rem 0.65rem;
+    color: var(--ink-soft); background: var(--surface); white-space: nowrap;
+  }
+  .rt-badge.is-contest {
+    color: #fff; background: #ef4444; border-color: #ef4444;
+  }
+
+  .rt-prayer {
+    display: flex; gap: 1.1rem; flex-wrap: wrap; align-items: baseline;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 0.6rem 1rem; margin: 0.9rem 0 0;
+    font-size: 0.82rem; font-variant-numeric: tabular-nums;
+  }
+  .rt-prayer span { color: var(--ink); }
+  .rt-prayer b {
+    color: var(--ink-faint); font-weight: 600; font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.05em; margin-right: 0.4rem;
+  }
+  .rt-prayer-src { margin-left: auto; color: var(--ink-faint); font-size: 0.74rem; }
+  .rt-prayer.is-loading span { color: var(--ink-faint); }
+
+  .rt-targets { margin: 1rem 0 0; }
+  .rt-targets h3 {
+    font-family: 'Oswald', sans-serif; font-size: 0.82rem; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--ink-faint); margin: 0 0 0.5rem;
+  }
+  .rt-target {
+    display: grid; grid-template-columns: 8rem auto 1fr; gap: 0.7rem;
+    align-items: center; padding: 0.28rem 0; font-size: 0.82rem;
+  }
+  .rt-target-name { display: flex; align-items: center; gap: 0.4rem; color: var(--ink); }
+  .rt-target-name::before {
+    content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--cat);
+  }
+  .rt-target-val { font-size: 0.78rem; color: var(--ink-soft); white-space: nowrap; }
+  .rt-target-val i { font-style: normal; color: var(--ink-faint); }
+  .rt-target .bar { display: block; height: 6px; width: 100%; }
+
+  .rt-wrap { overflow-x: auto; margin-top: 1rem; }
+  .rt-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 46rem; }
+  .rt-table thead th {
+    text-align: left; font-family: 'Oswald', sans-serif; font-weight: 500;
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--ink-faint); padding: 0.4rem 0.7rem; border-bottom: 1px solid var(--line);
+  }
+  .rt-table td { padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .rt-row.is-done { opacity: 0.5; }
+  .rt-row.is-now { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+  .rt-row.is-now td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+  .rt-time {
+    font-family: ui-monospace, monospace; font-size: 0.78rem; white-space: nowrap;
+    color: var(--ink-soft); font-variant-numeric: tabular-nums;
+  }
+  .rt-cat {
+    display: inline-block; font-size: 0.7rem; font-weight: 600; white-space: nowrap;
+    color: var(--cat); border: 1px solid color-mix(in srgb, var(--cat) 45%, transparent);
+    background: color-mix(in srgb, var(--cat) 12%, transparent);
+    border-radius: 999px; padding: 0.12rem 0.5rem;
+  }
+  .rt-act strong { display: block; color: var(--ink); font-weight: 600; }
+  .rt-act span { display: block; color: var(--ink-soft); font-size: 0.79rem; margin-top: 0.1rem; }
+  .rt-act a { font-size: 0.78rem; }
+  .rt-dur {
+    font-family: ui-monospace, monospace; font-size: 0.76rem; color: var(--ink-faint);
+    white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+  .rt-status { white-space: nowrap; font-size: 0.78rem; }
+  .rt-status i { display: block; font-style: normal; font-size: 0.72rem; color: var(--ink-faint); }
+  .rt-done { color: #22c55e; font-weight: 600; }
+  .rt-now {
+    background: var(--accent); color: #fff; font-weight: 600;
+    border-radius: 999px; padding: 0.1rem 0.5rem; font-size: 0.72rem;
+  }
+  .rt-soon { color: var(--ink-faint); }
+  .rt-prog { width: 6rem; }
+  /* .bar is an inline <span>; height only lands once it is a block. */
+  .rt-prog .bar { display: block; height: 6px; width: 100%; min-width: 0; }
+
+  @media (max-width: 700px) {
+    .rt-target { grid-template-columns: 7rem auto; }
+    .rt-target .bar { grid-column: 1 / -1; }
+  }
+
+  /* Start-of-day control, shared by the Routine bar and Profile */
+  .daystart-bar {
+    display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
+    padding: 0.7rem 1rem; margin: 0.9rem 0 0;
+  }
+  .daystart-bar label { font-weight: 600; color: var(--ink); font-size: 0.88rem; }
+  .daystart-note { font-size: 0.78rem; color: var(--ink-faint); }
+  input[type="time"].day-start-input {
+    font: inherit; font-family: ui-monospace, monospace; font-size: 0.85rem;
+    background: var(--bg); color: var(--ink); border: 1px solid var(--line);
+    border-radius: var(--r-sm); padding: 0.3rem 0.5rem;
+  }
+  input[type="time"].day-start-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* Profile > Preferences */
+  .pf-pref {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--r-lg); padding: 0.85rem 1rem;
+  }
+  .pf-pref-text strong { display: block; color: var(--ink); font-weight: 600; }
+  .pf-pref-text span { color: var(--ink-soft); font-size: 0.82rem; }
+  @media (max-width: 560px) { .pf-pref { flex-direction: column; align-items: flex-start; } }
+  .rt-badge.is-warn { color: #fff; background: #B7791F; border-color: #B7791F; }

@@ -52,27 +52,7 @@
       </div>
 
       <section class="doc-section">
-        <h2>Daily Rhythm</h2>
-        <p>Two templates. Which one you run depends on whether a contest lands that day — see the calendar below. Both are laid out on your own clock from the start time below, and Contest Day is built backwards from the real start of the next contest on your Contests tab.</p>
-
-        <div class="daystart-bar">
-          <label for="dayStartInput">My day starts at</label>
-          <input type="time" id="dayStartInput" class="day-start-input" value="06:00" step="900">
-          <span class="daystart-note">Everything below shifts with this. Saved to your account — <span id="dayStartLabel" class="mono">6:00 AM</span></span>
-        </div>
-
-        <div class="sched-grid">
-          <div class="sched-card">
-            <h4>Grind Day</h4>
-            <div class="sub" id="schedGrindSub">Mon · Tue · Thu (unless Codeforces lands)</div>
-            <div id="schedGrind"></div>
-          </div>
-          <div class="sched-card">
-            <h4>Contest Day</h4>
-            <div class="sub" id="schedContestSub">Whichever day the platform lands on — see calendar</div>
-            <div id="schedContest"></div>
-          </div>
-        </div>
+        <div id="routineBody"></div>
       </section>
 
       <section class="doc-section">
@@ -324,6 +304,7 @@
 <div id="printRoot" aria-hidden="true"></div>
 
 <script src="script.js"></script>
+<script src="prayer.js"></script>
 <script src="routine.js"></script>
 <script src="templates.js"></script>
 <script src="contests.js"></script>

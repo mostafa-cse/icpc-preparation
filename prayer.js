@@ -29,16 +29,19 @@
 
   const ORDER = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
-  // The times the schedule actually runs on are jamaat times, not astronomical
-  // ones — you pray when the mosque prays, which is why Zuhr sits at 1:30pm and
-  // not at the calculated 12:09. Each prayer therefore has a window it is
-  // allowed to fall in; two of them do not move at all.
+  // The times the schedule runs on are jamaat times, not astronomical ones —
+  // you pray when the mosque prays, which is why Zuhr sits at 1:30pm and not at
+  // the calculated 12:09.
+  //
+  // All five are editable. `min`/`max` and `preset` only shape the *starting*
+  // value; whatever the user types is kept verbatim. Clamping what someone
+  // deliberately typed would silently snap it back with no explanation.
   const SPEC = {
     Fajr:    { label: "Fajr",    min: 5 * 60,  max: 6 * 60 },
-    Dhuhr:   { label: "Zuhr",    fixed: 13 * 60 + 30 },
+    Dhuhr:   { label: "Zuhr",    preset: 13 * 60 + 30 },
     Asr:     { label: "Asr",     min: 16 * 60, max: 17 * 60 },
     Maghrib: { label: "Maghrib", min: 18 * 60, max: 19 * 60 },
-    Isha:    { label: "Isha",    fixed: 20 * 60 },
+    Isha:    { label: "Isha",    preset: 20 * 60 },
   };
 
   function toMins(s) {
@@ -53,22 +56,23 @@
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
   /*
-   * The times the routine is built from.
+   * The times the routine is built from, in priority order:
    *
-   *   fixed prayers  -> always their fixed time, whatever anyone says
-   *   ranged prayers -> the user's own value if they set one, otherwise today's
-   *                     calculated time pulled into the window, so Maghrib
-   *                     still tracks sunset across the season without ever
-   *                     leaving 6–7pm
+   *   1. whatever the user typed, exactly as typed
+   *   2. a preset, for the prayers whose time does not follow the sun
+   *   3. today's calculated time, pulled into the prayer's usual band, so
+   *      Maghrib tracks sunset across the season on its own
+   *   4. the middle of that band, if no calculation is available
    */
   function effective(calculated, overrides) {
     const out = {};
     ORDER.forEach(key => {
       const spec = SPEC[key];
-      if (spec.fixed != null) { out[key] = toHHMM(spec.fixed); return; }
 
       const own = toMins(overrides && overrides[key]);
-      if (own != null) { out[key] = toHHMM(clamp(own, spec.min, spec.max)); return; }
+      if (own != null) { out[key] = toHHMM(own); return; }
+
+      if (spec.preset != null) { out[key] = toHHMM(spec.preset); return; }
 
       const calc = toMins(calculated && calculated[key]);
       out[key] = toHHMM(calc != null ? clamp(calc, spec.min, spec.max)

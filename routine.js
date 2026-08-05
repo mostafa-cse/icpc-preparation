@@ -103,7 +103,7 @@
 
   function setPrayer(key, value, opts) {
     const P = window.ICPCPrayer;
-    if (!P || !P.SPEC[key] || P.SPEC[key].fixed != null) return;
+    if (!P || !P.SPEC[key]) return;
     const mins = P.toMins(value);
     if (mins == null) return;
     overrides = Object.assign({}, overrides, { [key]: P.toHHMM(mins) });
@@ -497,24 +497,15 @@
     const prayerStrip = !P || !prayer
       ? '<div class="rt-prayer is-loading"><span>Loading prayer times…</span></div>'
       : '<div class="rt-prayer">' +
-          P.ORDER.map(k => {
-            const spec = P.SPEC[k];
-            const at = parseHHMM(prayer[k]);
-            const own = overrides[k] != null;
-            if (spec.fixed != null) {
-              return '<label class="rt-pt is-fixed"><b>' + esc(spec.label) + "</b>" +
-                '<span class="rt-pt-fixed">' + esc(clock(at)) + "</span>" +
-                '<i>fixed</i></label>';
-            }
-            return '<label class="rt-pt' + (own ? " is-set" : "") + '"><b>' + esc(spec.label) + "</b>" +
+          P.ORDER.map(k =>
+            '<label class="rt-pt' + (overrides[k] != null ? " is-set" : "") + '">' +
+              "<b>" + esc(P.SPEC[k].label) + "</b>" +
               '<input type="time" class="prayer-input" data-prayer="' + k + '"' +
-                ' min="' + esc(P.toHHMM(spec.min)) + '" max="' + esc(P.toHHMM(spec.max)) + '"' +
                 ' step="300" value="' + esc(prayer[k]) + '">' +
-              "<i>" + esc(clock(spec.min)) + "–" + esc(clock(spec.max)) + "</i></label>";
-          }).join("") +
+            "</label>").join("") +
           '<span class="rt-prayer-src">' +
             (Object.keys(overrides).length
-              ? '<button type="button" id="prayerReset" class="rt-linkbtn">Use calculated times</button>'
+              ? '<button type="button" id="prayerReset" class="rt-linkbtn">Reset prayer times</button>'
               : calculated
                 ? (calculated.estimated ? "calculated — location unavailable" : esc(calculated.place || ""))
                 : "") +

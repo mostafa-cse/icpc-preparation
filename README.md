@@ -19,6 +19,7 @@ everything is static files and browser storage.
 | <kbd>1</kbd>–<kbd>5</kbd> | Routine · Checklist · Templates · Contests · Profile |
 | <kbd>e</kbd> / <kbd>E</kbd> | Expand / collapse every section |
 | <kbd>f</kbd> | Toggle *Flagged only* |
+| <kbd>n</kbd> | Jump to a random unsolved problem in view |
 | <kbd>t</kbd> / <kbd>T</kbd> | Start-pause / reset the time-box timer |
 | <kbd>?</kbd> | Show or hide the shortcut list |
 
@@ -119,6 +120,26 @@ and nothing syncs.
 Note the gate protects *data*, not *source*: on a static site anyone can fetch
 `script.js` and the rest directly, so don't put secrets in this folder.
 
+## Next problem
+
+Deciding *what* to attempt is its own time sink, and the answer is nearly
+always "anything unsolved in this block". **Next problem** (or <kbd>n</kbd>)
+picks one at random from whatever is currently in view — so the block, file,
+search and flag filters all narrow it — opens the section it lives in and
+scrolls to it.
+
+## Pace
+
+A strip above the block tiles, showing where you should be by now against
+where you are:
+
+- how many problems a day are left to finish the current block on time
+- the block's progress and which day of it you are on
+- the gap to the expected curve, coloured green/amber/red
+
+All derived from the start date and the plan, so it costs no stored history
+and works offline.
+
 ## Plan length: 16 or 26 weeks
 
 The same ten blocks, at two paces. The switch sits in the header strip next to
@@ -126,8 +147,17 @@ the start date:
 
 | | Weeks | Shape |
 |---|---|---|
-| Sprint | 16 (≈4 months) | 1, 2, 2, 2, 2, 1, 1, 2, 1, 2 |
-| Extended | 26 (≈6 months) | 2, 3, 3, 3, 3, 2, 2, 3, 2, 3 |
+| Sprint | 16 (≈4 months) | 2, 2, 2, 2, 2, 1, 1, 1, 1, 2 |
+| Extended | 26 (≈6 months) | 3, 3, 3, 3, 3, 2, 2, 2, 2, 3 |
+
+Weeks are allocated by how much work each block actually holds. Block 1 carries
+904 problems — 18% of the catalogue, because every source file opens with its
+own basics — so one week for it was four times the load of any other block.
+Geometry gives that week up: it is 451 problems, but a regional set contains
+exactly one geometry problem, so depth there is a stretch goal rather than the
+critical path. Per-week load went from a 4.0x spread to 1.4x. The final block
+keeps its two/three weeks in both plans — it is mock contests, and cutting it
+is the one change that would actually cost rating.
 
 Switching re-labels every week range, moves which block "this week" points at,
 and re-titles the page. It never touches progress: solved and flagged sets are

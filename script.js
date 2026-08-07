@@ -39,9 +39,21 @@
   // months, which is the difference between skimming a topic and actually
   // drilling it. Both must sum to their total, and the week labels and the
   // week-to-block map are derived from these so they cannot disagree.
+  //
+  // Weeks are allocated by how much work a block actually holds, not by how
+  // interesting it sounds. Block 1 carries 904 problems — 18% of the whole
+  // catalogue, since every source file starts with its own basics — and one
+  // week for that was four times the load of any other block. Geometry gives
+  // the week up: it is 451 problems, but a regional set contains exactly one
+  // geometry problem, so depth there is a stretch goal rather than the
+  // critical path. That takes the per-week spread from 4.0x to 1.4x.
+  //
+  // The last block stays at two/three weeks regardless: it is mock contests,
+  // not curriculum, and cutting it is the one change that would actually cost
+  // you rating.
   const PLAN_SPANS = {
-    16: [1, 2, 2, 2, 2, 1, 1, 2, 1, 2],
-    26: [2, 3, 3, 3, 3, 2, 2, 3, 2, 3],
+    16: [2, 2, 2, 2, 2, 1, 1, 1, 1, 2],
+    26: [3, 3, 3, 3, 3, 2, 2, 2, 2, 3],
   };
   const PLAN_STORE = "icpc_plan_weeks";
 
@@ -271,6 +283,7 @@
     renderFlagCount();
     renderDashboard();
     renderBlocks();
+    renderPace();
     updateFileAndSectionCounters();
   }
 
@@ -430,10 +443,96 @@
     renderDashboard();
   }
 
+  // ---------- Next problem ----------
+  // Choosing what to attempt is its own time sink, and the honest answer is
+  // almost always "anything unsolved in this block". This picks one at random
+  // from whatever is currently in view, opens its section and scrolls to it.
+  function pickNext() {
+    const pool = [];
+    const seen = new Set();
+    allSections.forEach(sec => {
+      if (filters.file && sec._file !== filters.file) return;
+      if (!sectionMatchesFilters(sec)) return;
+      sec._items2.forEach(it => {
+        if (solved.has(it.id) || seen.has(it.id)) return;
+        if (filters.deepOnly && !it.deepCut) return;
+        if (filters.flaggedOnly && !flagged.has(it.id)) return;
+        if (filters.text) {
+          const hay = (it.id + " " + (it.label || "")).toLowerCase();
+          if (hay.indexOf(filters.text.toLowerCase()) === -1) return;
+        }
+        seen.add(it.id);
+        pool.push({ it, sec });
+      });
+    });
+    if (!pool.length) return null;
+
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    // Open the card it lives in, then find the chip. buildAccordions may have
+    // hidden it under a collapsed section, so expand before scrolling.
+    const card = fileAccordions.querySelector('[data-sec-id="' + CSS.escape(pick.sec._id) + '"]');
+    if (card) {
+      card.classList.add("open");
+      openSecIds.add(pick.sec._id);
+    }
+    // chipRegistry holds every chip currently in the DOM for an id; a problem
+    // can appear in more than one section, so take the one just opened.
+    const chips = chipRegistry.get(pick.it.id) || [];
+    const chip = chips.find(c => card && card.contains(c)) || chips[0];
+    if (chip) {
+      chip.scrollIntoView({ behavior: "smooth", block: "center" });
+      chip.classList.add("is-picked");
+      setTimeout(() => chip.classList.remove("is-picked"), 2600);
+    }
+    return pick;
+  }
+
+  // ---------- Pace ----------
+  // Where you should be by now, against where you actually are. Everything is
+  // derived from the start date and the plan, so it costs no stored history.
+  const paceBar = document.getElementById("paceBar");
+  function renderPace() {
+    if (!paceBar) return;
+    const stored = localStorage.getItem("icpc_start_date");
+    const start = stored ? new Date(stored + "T00:00:00") : new Date();
+    const days = Math.floor((new Date(new Date().toDateString()) - new Date(start.toDateString())) / 86400000);
+
+    if (days < 0) { paceBar.innerHTML = ""; return; }
+
+    const week = Math.min(plan.total, Math.floor(days / 7) + 1);
+    const phase = PHASES[plan.weekToPhase[week]];
+    const ids = byPhaseIds[phase.id];
+    const done = countSet(ids), total = ids.size;
+
+    // How far into this block you are, in days.
+    let weeksBefore = 0;
+    for (let i = 0; i < phase.id; i++) weeksBefore += PLAN_SPANS[plan.total][i];
+    const blockDays = PLAN_SPANS[plan.total][phase.id] * 7;
+    const dayInBlock = Math.min(blockDays, Math.max(0, days - weeksBefore * 7));
+    const daysLeft = Math.max(0, blockDays - dayInBlock);
+
+    const expected = Math.round(total * (dayInBlock / blockDays));
+    const diff = done - expected;
+    const perDay = daysLeft > 0 ? Math.ceil((total - done) / daysLeft) : (total - done);
+
+    const state = diff >= 0 ? "ahead" : (diff > -total * 0.1 ? "near" : "behind");
+    const word = diff >= 0 ? "ahead of" : "behind";
+
+    paceBar.className = "pace is-" + state;
+    paceBar.innerHTML =
+      '<div class="pace-cell"><b>' + perDay.toLocaleString() + '</b><span>' +
+        (daysLeft > 0 ? "to solve per day, to finish this block on time" : "left in this block") + "</span></div>" +
+      '<div class="pace-cell"><b>' + done.toLocaleString() + " / " + total.toLocaleString() + "</b><span>" +
+        esc(phase.name) + " · day " + dayInBlock + " of " + blockDays + "</span></div>" +
+      '<div class="pace-cell"><b>' + (diff >= 0 ? "+" : "") + diff.toLocaleString() + "</b><span>" +
+        esc(word) + " the curve (" + expected.toLocaleString() + " expected by now)</span></div>";
+  }
+
   function refreshAll() {
     renderFlagCount();
     renderDashboard();
     renderBlocks();
+    renderPace();
     buildAccordions();
   }
 
@@ -450,6 +549,13 @@
   document.getElementById("hideSolved").addEventListener("change", e => { filters.hideSolved = e.target.checked; applyFilters(); });
   document.getElementById("deepOnly").addEventListener("change", e => { filters.deepOnly = e.target.checked; applyFilters(); });
   document.getElementById("flaggedOnly").addEventListener("change", e => { filters.flaggedOnly = e.target.checked; applyFilters(); });
+  const nextBtn = document.getElementById("nextBtn");
+  if (nextBtn) nextBtn.addEventListener("click", () => {
+    const pick = pickNext();
+    nextBtn.textContent = pick ? "Next problem →" : "Nothing left in view";
+    if (!pick) setTimeout(() => { nextBtn.textContent = "Next problem →"; }, 1800);
+  });
+
   document.getElementById("expandAllBtn").addEventListener("click", () => document.querySelectorAll(".sec-card").forEach(c => c.classList.add("open")));
   document.getElementById("collapseAllBtn").addEventListener("click", () => document.querySelectorAll(".sec-card").forEach(c => c.classList.remove("open")));
 
@@ -541,6 +647,7 @@
     renderDashboard();
     renderBlocks();
     renderTodayStrip();
+    renderPace();
     if (!(opts && opts.silent)) {
       const sync = window.ICPCSettings && window.ICPCSettings.onChange;
       if (typeof sync === "function") sync({ plan_weeks: weeks });
@@ -591,6 +698,7 @@
     startDateInput.addEventListener("change", () => {
       localStorage.setItem("icpc_start_date", startDateInput.value);
       renderTodayStrip();
+      renderPace();
     });
     const jumpBtn = document.createElement("button");
     jumpBtn.type = "button"; jumpBtn.className = "link-btn"; jumpBtn.textContent = "Jump to this week's block →";
@@ -682,6 +790,13 @@
       if (tab && !tab.hidden) { e.preventDefault(); activateTab(TAB_KEYS[e.key]); }
       return;
     }
+    if (e.key === "n" || e.key === "N") {
+      e.preventDefault();
+      activateTab("checklist");
+      const b = document.getElementById("nextBtn");
+      if (b) b.click();
+      return;
+    }
     if (e.key === "e" || e.key === "E") {
       e.preventDefault();
       activateTab("checklist");
@@ -703,9 +818,23 @@
     }
   });
 
+  // Keep the sticky filter bar clear of the header at any width.
+  function measureTopbar() {
+    const bar = document.querySelector(".topbar");
+    if (!bar) return;
+    document.documentElement.style.setProperty("--topbar-h", bar.offsetHeight + "px");
+  }
+  window.addEventListener("resize", measureTopbar);
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(measureTopbar);
+    const bar = document.querySelector(".topbar");
+    if (bar) ro.observe(bar);
+  }
+
   // ---------- Init ----------
   document.getElementById("statTotalInline").textContent = allIds.size.toLocaleString();
   applyPlanText();
   renderTodayStrip();
+  measureTopbar();
   refreshAll();
 })();

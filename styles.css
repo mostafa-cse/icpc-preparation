@@ -348,7 +348,10 @@
 
   /* ---------- Filter bar ---------- */
   .filter-bar {
-    position: sticky; top: 4.2rem; z-index: 30;
+    /* Pinned just under the header. The offset is measured at runtime rather
+       than hardcoded: the header grows a row when the plan switch wraps, and a
+       fixed value left the filter bar underneath it and unclickable. */
+    position: sticky; top: var(--topbar-h, 4.2rem); z-index: 30;
     background: color-mix(in srgb, var(--bg) 90%, transparent);
     backdrop-filter: saturate(1.8) blur(10px);
     -webkit-backdrop-filter: saturate(1.8) blur(10px);
@@ -1310,3 +1313,34 @@
   .plan-opt:hover { color: var(--ink); }
   .plan-opt.active { background: var(--accent); color: #fff; }
   .plan-opt.active i { opacity: 0.85; }
+
+  /* Pace strip — where you should be by now versus where you are */
+  .pace {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem;
+    margin: 0.9rem 0 0; padding: 0.75rem 1rem;
+    border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--surface);
+    border-left: 3px solid var(--ink-faint);
+  }
+  .pace:empty { display: none; }
+  .pace.is-ahead  { border-left-color: var(--good); }
+  .pace.is-near   { border-left-color: var(--warn); }
+  .pace.is-behind { border-left-color: var(--bad); }
+  .pace-cell { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+  .pace-cell b {
+    font-family: 'Oswald', sans-serif; font-size: 1.25rem; font-weight: 600;
+    color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .pace-cell span { font-size: 0.76rem; color: var(--ink-faint); line-height: 1.3; }
+  .pace.is-ahead  .pace-cell:last-child b { color: var(--good); }
+  .pace.is-behind .pace-cell:last-child b { color: var(--bad); }
+  @media (max-width: 700px) { .pace { grid-template-columns: 1fr; } }
+
+  /* The chip "Next problem" landed on */
+  .chip.is-picked {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+    animation: pickPulse 2.4s var(--ease);
+  }
+  @keyframes pickPulse {
+    0%, 100% { box-shadow: 0 0 0 0 transparent; }
+    12%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 35%, transparent); }
+  }

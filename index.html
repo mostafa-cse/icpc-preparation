@@ -110,6 +110,7 @@
             </div>
           </div>
         </div>
+        <div class="pace" id="paceBar"></div>
         <div class="grid-tiles" id="phaseGrid"></div>
         <div class="grid-tiles" id="fileGrid"></div>
       </div>
@@ -123,6 +124,7 @@
         <label class="chk-label"><input type="checkbox" id="flaggedOnly"> Flagged only <span id="flagCount" class="chk-count"></span></label>
         <span class="key-hint">Right-click a problem to flag it · press <kbd>?</kbd> for shortcuts</span>
         <div class="btn-row">
+          <button class="btn primary" id="nextBtn" type="button" title="Jump to a random unsolved problem in view (n)">Next problem →</button>
           <button class="btn" id="expandAllBtn" type="button">Expand all</button>
           <button class="btn" id="collapseAllBtn" type="button">Collapse all</button>
           <button class="btn" id="exportBtn" type="button">Export progress</button>
@@ -258,6 +260,7 @@
       <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Routine · Checklist · Templates · Contests · Profile</dd>
       <dt><kbd>e</kbd> / <kbd>E</kbd></dt><dd>Expand / collapse all sections</dd>
       <dt><kbd>f</kbd></dt><dd>Toggle flagged-only</dd>
+      <dt><kbd>n</kbd></dt><dd>Jump to a random unsolved problem in view</dd>
       <dt><kbd>t</kbd> / <kbd>T</kbd></dt><dd>Start-pause / reset the time-box timer</dd>
       <dt><kbd>?</kbd></dt><dd>Show or hide this</dd>
     </dl>

@@ -348,12 +348,23 @@
       block.appendChild(secWrap);
 
       const fileHead = block.querySelector(".file-head");
+      // `hidden` rather than a CSS class alone. This is a static site with no
+      // build step, so a browser can hold a stale styles.css while already
+      // running the new script.js — and then the click would toggle a class
+      // nothing styles yet, and the feature would look broken. The UA
+      // stylesheet gives [hidden] display:none, so this works regardless.
+      const applyFileState = () => {
+        const closed = block.classList.contains("closed");
+        secWrap.hidden = closed;
+        fileHead.setAttribute("aria-expanded", closed ? "false" : "true");
+      };
       const toggleFile = () => {
         const closed = block.classList.toggle("closed");
         if (closed) closedFiles.add(file); else closedFiles.delete(file);
         localStorage.setItem(CLOSED_FILES_KEY, JSON.stringify([...closedFiles]));
-        fileHead.setAttribute("aria-expanded", closed ? "false" : "true");
+        applyFileState();
       };
+      applyFileState();
       fileHead.addEventListener("click", toggleFile);
       fileHead.addEventListener("keydown", e => {
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleFile(); }
@@ -592,6 +603,8 @@
       b.classList.toggle("closed", !open);
       const h = b.querySelector(".file-head");
       if (h) h.setAttribute("aria-expanded", open ? "true" : "false");
+      const wrap = b.querySelector(".file-secs-wrap");
+      if (wrap) wrap.hidden = !open;
       if (open) closedFiles.delete(b.dataset.file); else closedFiles.add(b.dataset.file);
     });
     localStorage.setItem(CLOSED_FILES_KEY, JSON.stringify([...closedFiles]));

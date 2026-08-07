@@ -34,6 +34,24 @@ amber at 45 minutes and red at 60, and otherwise stays out of the way. It
 stores a start timestamp rather than a running count, so reloading or closing
 the tab mid-problem neither loses nor inflates the time.
 
+## Deploying
+
+Assets are referenced with a `?v=<content-hash>` stamp so a new deploy reaches
+browsers immediately. GitHub Pages serves with `cache-control: max-age=600`, and
+the dangerous case is not a fully stale page but a mixed one — new `script.js`
+against old `styles.css` — where a feature ships half-applied and looks broken.
+
+Re-stamp before committing whenever a `.js` or `.css` file changed:
+
+```bash
+node stamp.js           # rewrite index.html with fresh hashes
+node stamp.js --check   # exit 1 if any stamp is stale
+```
+
+Features should not depend on the stylesheet alone for correctness either: the
+collapsible sources set `hidden` on the wrapper from JavaScript, so they work
+even against a stylesheet that predates them.
+
 ## Running it
 
 It's static — open `index.html`, or serve the folder:

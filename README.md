@@ -1,12 +1,12 @@
-# ICPC Final Sprint — 16-Week Training Tracker
+# ICPC Final Sprint — Training Tracker
 
 A single-page training tracker for ICPC preparation. No backend, no database —
 everything is static files and browser storage.
 
 ## What's in it
 
-- **Routine** — the 16-week plan: daily rhythm, weekly contest calendar, and 10 training blocks with live progress bars.
-- **Checklist** — 4,427 unique problems across 504 sections, parsed from five source files. Click to tick one off; **right-click or Alt+click to flag it for revision**, then filter to *Flagged only* to get the revision queue the plan keeps referring to. Combine it with *Hide solved* for "flagged and still unsolved".
+- **Routine** — the training plan at either pace: daily rhythm, weekly contest calendar, and 10 training blocks with live progress bars.
+- **Checklist** — 5,089 unique problems across 593 sections, parsed from six source files. Click to tick one off; **right-click or Alt+click to flag it for revision**, then filter to *Flagged only* to get the revision queue the plan keeps referring to. Combine it with *Hide solved* for "flagged and still unsolved".
 - **Templates** — an onsite-contest notebook. Store C++ templates with description and complexity, then export the library as LaTeX, Markdown, a single `.cpp`, JSON, or print straight to PDF. Each entry carries a `[N lines] - hash` signature (MD5 of the comment- and whitespace-stripped code) so you can retype a template at a contest and verify you typed it correctly.
 - **Contests** — the next upcoming round across Codeforces, CodeChef, AtCoder and LeetCode, with a countdown, browser reminders, and `.ics` calendar export.
 
@@ -119,28 +119,51 @@ and nothing syncs.
 Note the gate protects *data*, not *source*: on a static site anyone can fetch
 `script.js` and the rest directly, so don't put secrets in this folder.
 
+## Plan length: 16 or 26 weeks
+
+The same ten blocks, at two paces. The switch sits in the header strip next to
+the start date:
+
+| | Weeks | Shape |
+|---|---|---|
+| Sprint | 16 (≈4 months) | 1, 2, 2, 2, 2, 1, 1, 2, 1, 2 |
+| Extended | 26 (≈6 months) | 2, 3, 3, 3, 3, 2, 2, 3, 2, 3 |
+
+Switching re-labels every week range, moves which block "this week" points at,
+and re-titles the page. It never touches progress: solved and flagged sets are
+keyed by problem id, not by week. The week labels and the week-to-block map are
+both derived from those span arrays, so they cannot drift apart.
+
+Stored in `user_settings.plan_weeks`, and in localStorage when offline.
+
 ## Prayer times
 
 The Routine tab builds the day around prayer times, which are **jamaat times,
-not astronomical ones** — you pray when the mosque prays. Each prayer has a
-window it must fall in, and two do not move at all:
+not astronomical ones** — you pray when the mosque prays, which is why Zuhr sits
+at 1:30 pm and not at the calculated 12:09.
 
-| Prayer  | Allowed | Editable |
-|---------|---------|----------|
-| Fajr    | 5:00–6:00 am | yes |
-| Zuhr    | 1:30 pm | no — fixed |
-| Asr     | 4:00–5:00 pm | yes |
-| Maghrib | 6:00–7:00 pm | yes |
-| Isha    | 8:00 pm | no — fixed |
+All five are editable, and whatever you type is kept exactly as typed. Editing
+one rebuilds the whole day, so every block after it moves.
 
-Editable prayers default to today's calculated time pulled into the window, so
-Maghrib still tracks sunset across the season without ever leaving 6–7 pm. Set
-your own and it sticks; **Use calculated times** clears the overrides. Anything
-outside a window is clamped to it. Changing a time rebuilds the whole schedule.
+The starting values, before you touch anything:
+
+| Prayer  | Default |
+|---------|---------|
+| Fajr    | today's calculated time, pulled into 5:00–6:00 am |
+| Zuhr    | 1:30 pm |
+| Asr     | today's calculated time, pulled into 4:00–5:00 pm |
+| Maghrib | today's calculated time, pulled into 6:00–7:00 pm |
+| Isha    | 8:00 pm |
+
+So Maghrib tracks sunset across the season on its own, while Zuhr and Isha stay
+where the mosque puts them. **Reset prayer times** clears your overrides and
+returns to those defaults.
 
 Calculated times come from `api.aladhan.com` (Karachi method, Hanafi Asr), via
-browser location then an IP lookup, cached per day. If every lookup fails the
-windows alone still produce a working schedule.
+browser location then an IP lookup, cached per day. If every lookup fails, the
+defaults alone still produce a working schedule.
+
+Stored in `user_settings.prayer_times`, and in localStorage when offline.
 
 ## Approving accounts (Admin tab)
 
@@ -225,4 +248,11 @@ Needs `extsizes`, `geometry`, `multicol`, `listings`, `xcolor`, `titlesec`,
 ## Source data
 
 Problem sets are parsed from `CSES.md`, `Cp-books.md`, `LightOJ.md`,
-`Lougu-Training.md` and `USACO-Guide.md`.
+`Lougu-Training.md`, `USACO-Guide.md` and `cp-algo.md`.
+
+`cp-algo.md` is the cp-algorithms.com practice list: 89 topics across 12
+chapters, 846 references of which 662 are new to the catalogue. Its chapters map
+onto the ten training blocks by subject, and the Graphs chapter is split —
+traversal, shortest paths and MST land in the core graphs block, while flows,
+2-SAT, matching and SCC go to the advanced one, and LCA to advanced data
+structures.

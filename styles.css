@@ -1293,3 +1293,20 @@
   .timebox.is-hard .tb-face { color: var(--bad); }
   @media print { .timebox, .key-help { display: none !important; } }
   @media (max-width: 560px) { .timebox { left: 0.6rem; bottom: 0.6rem; padding: 0.25rem 0.4rem 0.25rem 0.6rem; } }
+
+  /* 16 / 26-week plan switch in the today strip */
+  .plan-switch {
+    display: inline-flex; gap: 0.15rem; padding: 0.15rem;
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-pill);
+  }
+  .plan-opt {
+    display: inline-flex; flex-direction: column; align-items: center; line-height: 1.05;
+    font: inherit; font-size: 0.74rem; font-weight: 600; cursor: pointer;
+    padding: 0.2rem 0.6rem; border: none; border-radius: var(--r-pill);
+    background: transparent; color: var(--ink-soft);
+    transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+  }
+  .plan-opt i { font-style: normal; font-size: 0.6rem; opacity: 0.7; font-weight: 500; }
+  .plan-opt:hover { color: var(--ink); }
+  .plan-opt.active { background: var(--accent); color: #fff; }
+  .plan-opt.active i { opacity: 0.85; }

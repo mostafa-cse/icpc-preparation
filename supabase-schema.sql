@@ -230,6 +230,10 @@ create table if not exists public.user_settings (
   user_id             uuid primary key references auth.users on delete cascade,
   -- Routine tab
   start_date          date,
+  -- 16 for the four-month sprint, 26 for the six-month version. Same ten
+  -- blocks either way; only the pacing changes.
+  plan_weeks          smallint not null default 16
+                      check (plan_weeks in (16, 26)),
   -- When the training day begins, in minutes past local midnight (360 = 06:00).
   -- Stored as a plain integer, not `time`, so it carries no timezone of its own:
   -- the Routine tab lays every block out against the user's own wall clock.
@@ -557,6 +561,18 @@ alter table public.user_settings
 
 alter table public.user_settings
   add column if not exists prayer_times jsonb not null default '{}'::jsonb;
+
+alter table public.user_settings
+  add column if not exists plan_weeks smallint not null default 16;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'user_settings_plan_weeks_check') then
+    alter table public.user_settings
+      add constraint user_settings_plan_weeks_check check (plan_weeks in (16, 26));
+  end if;
+end
+$$;
 
 alter table public.problem_progress
   add column if not exists flagged boolean not null default false;

@@ -6,7 +6,7 @@ everything is static files and browser storage.
 ## What's in it
 
 - **Routine** — the training plan at either pace: daily rhythm, weekly contest calendar, and 10 training blocks with live progress bars.
-- **Checklist** — 5,089 unique problems across 593 sections, parsed from six source files. Click to tick one off; **right-click or Alt+click to flag it for revision**, then filter to *Flagged only* to get the revision queue the plan keeps referring to. Combine it with *Hide solved* for "flagged and still unsolved".
+- **Checklist** — 5,089 unique problems across 593 sections, parsed from six source files. Each source folds away with a click on its header, so you can hide the five you are not working from; *Expand all* / *Collapse all* work on both sources and sections. Click to tick one off; **right-click or Alt+click to flag it for revision**, then filter to *Flagged only* to get the revision queue the plan keeps referring to. Combine it with *Hide solved* for "flagged and still unsolved".
 - **Templates** — an onsite-contest notebook. Store C++ templates with description and complexity, then export the library as LaTeX, Markdown, a single `.cpp`, JSON, or print straight to PDF. Each entry carries a `[N lines] - hash` signature (MD5 of the comment- and whitespace-stripped code) so you can retype a template at a contest and verify you typed it correctly.
 - **Contests** — the next upcoming round across Codeforces, CodeChef, AtCoder and LeetCode, with a countdown, browser reminders, and `.ics` calendar export.
 

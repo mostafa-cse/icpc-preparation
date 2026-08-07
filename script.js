@@ -248,6 +248,11 @@
   const emptyNote = document.getElementById("emptyNote");
   const chipRegistry = new Map(); // id -> array of chip elements currently in DOM
   const openSecIds = new Set(); // sections the user has manually expanded — survives rebuilds
+  // Whole source files the user has folded away. Six files and 593 sections is
+  // a lot of scrolling when you only care about one of them.
+  const CLOSED_FILES_KEY = "icpc_closed_files";
+  let closedFiles = new Set();
+  try { closedFiles = new Set(JSON.parse(localStorage.getItem(CLOSED_FILES_KEY) || "[]")); } catch (e) {}
 
   function updateChipsForId(id) {
     const arr = chipRegistry.get(id);
@@ -325,13 +330,34 @@
       const fd = countSet(fileIds), ft = fileIds.size;
       const block = document.createElement("div");
       block.className = "file-block";
-      block.innerHTML = `<div class="file-head">
+      block.dataset.file = file;
+      // Collapsed by choice, or forced open while a filter is narrowing things
+      // down — hiding the only matches would be worse than useless.
+      const filtering = !!(filters.text || filters.hideSolved || filters.deepOnly || filters.flaggedOnly);
+      if (!filtering && closedFiles.has(file)) block.classList.add("closed");
+      block.innerHTML = `<div class="file-head" role="button" tabindex="0"
+            aria-expanded="${block.classList.contains("closed") ? "false" : "true"}">
+          <span class="file-chevron">▶</span>
           <h3>${esc(file.replace(".md",""))}</h3>
           <span class="file-count">${fd}/${ft}</span>
+          <span class="file-secs">${visibleSecs.length} section${visibleSecs.length === 1 ? "" : "s"}</span>
           <div class="bar"><i style="width:${ft ? (100*fd/ft).toFixed(1) : 0}%"></i></div>
         </div>`;
       const secWrap = document.createElement("div");
+      secWrap.className = "file-secs-wrap";
       block.appendChild(secWrap);
+
+      const fileHead = block.querySelector(".file-head");
+      const toggleFile = () => {
+        const closed = block.classList.toggle("closed");
+        if (closed) closedFiles.add(file); else closedFiles.delete(file);
+        localStorage.setItem(CLOSED_FILES_KEY, JSON.stringify([...closedFiles]));
+        fileHead.setAttribute("aria-expanded", closed ? "false" : "true");
+      };
+      fileHead.addEventListener("click", toggleFile);
+      fileHead.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleFile(); }
+      });
 
       visibleSecs.forEach(({ sec, items }) => {
         const uniqueIds = sec._uniqueIds || (sec._uniqueIds = [...new Set(sec._items2.map(x => x.id))]);
@@ -556,8 +582,22 @@
     if (!pick) setTimeout(() => { nextBtn.textContent = "Next problem →"; }, 1800);
   });
 
-  document.getElementById("expandAllBtn").addEventListener("click", () => document.querySelectorAll(".sec-card").forEach(c => c.classList.add("open")));
-  document.getElementById("collapseAllBtn").addEventListener("click", () => document.querySelectorAll(".sec-card").forEach(c => c.classList.remove("open")));
+  // Expand/collapse covers both levels: sources and the sections inside them.
+  function setAllOpen(open) {
+    document.querySelectorAll(".sec-card").forEach(c => {
+      c.classList.toggle("open", open);
+      if (c.dataset.secId) { if (open) openSecIds.add(c.dataset.secId); else openSecIds.delete(c.dataset.secId); }
+    });
+    document.querySelectorAll(".file-block").forEach(b => {
+      b.classList.toggle("closed", !open);
+      const h = b.querySelector(".file-head");
+      if (h) h.setAttribute("aria-expanded", open ? "true" : "false");
+      if (open) closedFiles.delete(b.dataset.file); else closedFiles.add(b.dataset.file);
+    });
+    localStorage.setItem(CLOSED_FILES_KEY, JSON.stringify([...closedFiles]));
+  }
+  document.getElementById("expandAllBtn").addEventListener("click", () => setAllOpen(true));
+  document.getElementById("collapseAllBtn").addEventListener("click", () => setAllOpen(false));
 
   // ---------- Export / Import / Reset (two-step confirm, no native dialogs) ----------
   function twoStepConfirm(btn, label, confirmLabel, action) {

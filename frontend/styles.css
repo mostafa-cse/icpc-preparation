@@ -3289,7 +3289,7 @@
     align-items: center;
     text-align: center;
     position: relative;
-    max-width: 600px;
+    max-width: 780px;
     width: 95%;
     padding: 1.5rem 1rem;
   }
@@ -3300,20 +3300,20 @@
     top: 30%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 420px;
-    height: 420px;
-    background: radial-gradient(circle, rgba(255, 87, 34, 0.25) 0%, rgba(255, 152, 0, 0.1) 45%, transparent 70%);
+    width: 580px;
+    height: 580px;
+    background: radial-gradient(circle, rgba(255, 87, 34, 0.28) 0%, rgba(255, 152, 0, 0.12) 45%, transparent 70%);
     border-radius: 50%;
     pointer-events: none;
     animation: ambientPulse 2.8s ease-in-out infinite alternate;
   }
 
   @keyframes ambientPulse {
-    0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
+    0% { transform: translate(-50%, -50%) scale(0.92); opacity: 0.75; }
     100% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
   }
 
-  /* Combined Pixel Art & Fireplace Stage */
+  /* Combined Pixel Art & Fireplace Stage - Enlarged Majestic Scale */
   .cp-coder-stage {
     position: relative;
     width: 500px;
@@ -3327,15 +3327,23 @@
     justify-content: center;
     overflow: visible;
     box-shadow: none;
-    margin: 0 auto 1.25rem;
+    transform: scale(1.35);
+    transform-origin: center center;
+    margin: 2rem auto 4.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .cp-coder-stage {
+      transform: scale(1.05);
+      margin: 1rem auto 1.8rem;
+    }
   }
 
   @media (max-width: 580px) {
     .cp-coder-stage {
-      transform: scale(0.72);
-      transform-origin: center bottom;
-      margin-bottom: -35px;
-      margin-top: -35px;
+      transform: scale(0.75);
+      transform-origin: center center;
+      margin: -15px auto -15px;
     }
   }
 
@@ -3623,7 +3631,7 @@
 
   /* Progress Shimmer Track */
   .flame-progress-track {
-    width: 240px;
+    width: 280px;
     height: 4px;
     background: rgba(255, 255, 255, 0.08);
     border-radius: 999px;

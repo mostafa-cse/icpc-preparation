@@ -232,6 +232,8 @@
       const pct = t ? (100 * d / t).toFixed(1) : "0.0";
       const weeksText = weeksOf(p);
       const isCurrentActive = filters.phase === String(p.id);
+      let pStars = 0;
+      ids.forEach(id => { if (flagged.has(id)) pStars++; });
 
       const card = document.createElement("div");
       card.className = "checklist-track-card" + (isCurrentActive ? " is-active-track" : "");
@@ -243,6 +245,7 @@
           <div class="track-card-pill-row">
             <span class="track-index-badge">Track ${p.id + 1}</span>
             <span class="track-time-pill">${esc(weeksText)}</span>
+            ${pStars > 0 ? `<span class="track-star-badge" title="${pStars} starred important problems">★ ${pStars}</span>` : ""}
           </div>
           <h3 class="track-title">${esc(p.name)}</h3>
           <p class="track-desc">${esc(p.desc)}</p>
@@ -302,14 +305,21 @@
         const t = ids.size;
         const rem = Math.max(0, t - d);
         const pct = t ? (100 * d / t).toFixed(1) : "0.0";
+        let starCountInPhase = 0;
+        ids.forEach(id => { if (flagged.has(id)) starCountInPhase++; });
 
         const totalEl = document.getElementById("phaseTotalCount");
         const solvedEl = document.getElementById("phaseSolvedCount");
         const remainEl = document.getElementById("phaseRemainCount");
+        const starredEl = document.getElementById("phaseStarredCount");
 
         if (totalEl) totalEl.textContent = t.toLocaleString();
         if (solvedEl) solvedEl.textContent = d.toLocaleString();
         if (remainEl) remainEl.textContent = rem.toLocaleString();
+        if (starredEl) starredEl.textContent = starCountInPhase.toLocaleString();
+
+        const starChip = document.getElementById("phaseStarredChip");
+        if (starChip) starChip.classList.toggle("active", !!filters.flaggedOnly);
       }
       if (pSel) pSel.value = String(filters.phase);
     } else {
@@ -463,6 +473,20 @@
     arr.forEach(c => {
       c.classList.toggle("solved", isSolved);
       c.classList.toggle("flagged", isFlagged);
+      c.classList.toggle("starred", isFlagged);
+      const starBtn = c.querySelector(".star-btn");
+      if (starBtn) {
+        starBtn.classList.toggle("active", isFlagged);
+        const svg = starBtn.querySelector("svg");
+        if (svg) svg.setAttribute("fill", isFlagged ? "currentColor" : "none");
+        starBtn.title = isFlagged ? "Starred as important (click to unstar)" : "Star as important";
+        starBtn.setAttribute("aria-label", starBtn.title);
+        if (isFlagged) {
+          starBtn.classList.remove("just-starred");
+          void starBtn.offsetWidth;
+          starBtn.classList.add("just-starred");
+        }
+      }
     });
   }
   function refreshAllChipVisuals() {
@@ -471,6 +495,15 @@
       elements.forEach(c => {
         c.classList.toggle("solved", isSolved);
         c.classList.toggle("flagged", isFlagged);
+        c.classList.toggle("starred", isFlagged);
+        const starBtn = c.querySelector(".star-btn");
+        if (starBtn) {
+          starBtn.classList.toggle("active", isFlagged);
+          const svg = starBtn.querySelector("svg");
+          if (svg) svg.setAttribute("fill", isFlagged ? "currentColor" : "none");
+          starBtn.title = isFlagged ? "Starred as important (click to unstar)" : "Star as important";
+          starBtn.setAttribute("aria-label", starBtn.title);
+        }
       });
     });
   }
@@ -484,6 +517,19 @@
   function renderFlagCount() {
     const fc = document.getElementById("flagCount");
     if (fc) fc.textContent = flagged.size ? "(" + flagged.size + ")" : "";
+    const sc = document.getElementById("phaseStarredCount");
+    if (sc) {
+      if (filters.phase !== "") {
+        const ids = byPhaseIds[filters.phase] || new Set();
+        let starCountInPhase = 0;
+        ids.forEach(id => { if (flagged.has(id)) starCountInPhase++; });
+        sc.textContent = starCountInPhase.toLocaleString();
+      } else {
+        sc.textContent = flagged.size.toLocaleString();
+      }
+    }
+    const starChip = document.getElementById("phaseStarredChip");
+    if (starChip) starChip.classList.toggle("active", !!filters.flaggedOnly);
   }
 
   function refreshCounters() {
@@ -625,17 +671,26 @@
         const grid = document.createElement("div");
         grid.className = "chip-grid";
         items.forEach(it => {
+          const isStarred = flagged.has(it.id);
           const chip = document.createElement("span");
           chip.className = "chip" + (solved.has(it.id) ? " solved" : "") +
-            (flagged.has(it.id) ? " flagged" : "") + (it.deepCut ? " deep" : "") +
+            (isStarred ? " flagged starred" : "") + (it.deepCut ? " deep" : "") +
             (it.difficulty === "Easy" || it.difficulty === "Very Easy" ? " diff-easy" : "") +
             (it.difficulty === "Hard" || it.difficulty === "Very Hard" || it.difficulty === "Insane" ? " diff-hard" : "");
           chip.dataset.id = it.id;
           if (it.note) chip.title = it.note;
           const label = it.kind === "link" ? (it.label || it.id) : displayId(it.id);
-          chip.innerHTML = `<span class="lbl">${esc(label)}</span><a class="go" href="${esc(linkFor(it))}" target="_blank" rel="noopener noreferrer" title="Open problem">↗</a>`;
+          chip.innerHTML = `<button type="button" class="star-btn${isStarred ? ' active' : ''}" title="${isStarred ? 'Starred as important (click to unstar)' : 'Star as important'}" aria-label="${isStarred ? 'Starred as important (click to unstar)' : 'Star as important'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="${isStarred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></button><span class="lbl">${esc(label)}</span><a class="go" href="${esc(linkFor(it))}" target="_blank" rel="noopener noreferrer" title="Open problem">↗</a>`;
+          const starBtn = chip.querySelector(".star-btn");
+          if (starBtn) {
+            starBtn.addEventListener("click", e => {
+              e.stopPropagation();
+              e.preventDefault();
+              toggleFlag(it.id);
+            });
+          }
           const lbl = chip.querySelector(".lbl");
-          lbl.title = "Click to mark solved - right-click or Alt+click to flag for revision";
+          lbl.title = "Click to mark solved · Star to mark important";
           lbl.addEventListener("click", e => {
             // Alt+click flags instead, for trackpads and anyone who would
             // rather not reach for the context menu.
@@ -830,6 +885,16 @@
   if (deepOnlyEl) deepOnlyEl.addEventListener("change", e => { filters.deepOnly = e.target.checked; applyFilters(); });
   const flaggedOnlyEl = document.getElementById("flaggedOnly");
   if (flaggedOnlyEl) flaggedOnlyEl.addEventListener("change", e => { filters.flaggedOnly = e.target.checked; applyFilters(); });
+  const phaseStarredChip = document.getElementById("phaseStarredChip");
+  if (phaseStarredChip) {
+    phaseStarredChip.addEventListener("click", () => {
+      if (flaggedOnlyEl) {
+        flaggedOnlyEl.checked = !flaggedOnlyEl.checked;
+        filters.flaggedOnly = flaggedOnlyEl.checked;
+        applyFilters();
+      }
+    });
+  }
   const nextBtn = document.getElementById("nextBtn");
   if (nextBtn) nextBtn.addEventListener("click", () => {
     const pick = pickNext();
@@ -1229,7 +1294,7 @@
     linkFor: linkFor,
     displayId: displayId,
     activateTab: activateTab,
-    applyFilters: (phaseId, file) => {
+    applyFilters: (phaseId, file, starredOnly) => {
       if (phaseId !== undefined && phaseId !== null) {
         openChecklistPage(phaseId);
       }
@@ -1237,8 +1302,13 @@
         filters.file = file;
         const fSel = document.getElementById("fileSelect");
         if (fSel) fSel.value = filters.file;
-        applyFilters();
       }
+      if (starredOnly !== undefined && starredOnly !== null) {
+        filters.flaggedOnly = !!starredOnly;
+        const starChk = document.getElementById("flaggedOnly");
+        if (starChk) starChk.checked = filters.flaggedOnly;
+      }
+      applyFilters();
     },
     openChecklist: openChecklistPage,
     showChecklistHub: showChecklistHub

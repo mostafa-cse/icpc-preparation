@@ -430,6 +430,22 @@
           </div>
           <div class="db-kpi-note">Velocity: ~${stats.currentVelocity} solves/day</div>
         </div>
+
+        <!-- Card 6: Starred / Important Problems -->
+        <div class="db-kpi-card db-kpi-starred" id="dbKpiStarred" role="button" tabindex="0" title="Click to filter Starred problems in Checklist" style="cursor:pointer">
+          <div class="db-kpi-top">
+            <span class="db-kpi-title">Important / Starred</span>
+            <span class="db-kpi-badge warn">★ Priority</span>
+          </div>
+          <div class="db-kpi-main">
+            <span class="db-kpi-val"><svg class="kpi-icon" width="18" height="18" viewBox="0 0 24 24" fill="#f59e0b" stroke="#d97706" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>${stats.flagged.size}</span>
+            <span class="db-kpi-sub">problems starred</span>
+          </div>
+          <div class="db-kpi-note" style="color:var(--accent-ink);display:flex;align-items:center;gap:0.25rem;">
+            <span>${stats.countSet(stats.flagged)} solved · ${Math.max(0, stats.flagged.size - stats.countSet(stats.flagged))} remaining</span>
+            <span style="margin-left:auto;font-weight:600">Filter →</span>
+          </div>
+        </div>
       </div>
     `;
 
@@ -658,6 +674,23 @@
         }
       });
     });
+
+    const starKpi = host.querySelector("#dbKpiStarred");
+    if (starKpi) {
+      starKpi.addEventListener("click", () => {
+        if (window.ICPCData) {
+          window.ICPCData.activateTab("checklist");
+          window.ICPCData.applyFilters(undefined, undefined, true);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      });
+      starKpi.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          starKpi.click();
+        }
+      });
+    }
   }
 
   // ---------- Listen to App Events ----------

@@ -33,7 +33,7 @@
   });
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=371e7192">
+<link rel="stylesheet" href="styles.css?v=2925bb17">
 <script src="theme.js?v=ddf538cb"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script src="supabase-config.js?v=f64f5749"></script>
@@ -250,6 +250,12 @@
               <span class="ps-label">Remaining</span>
               <span class="ps-val" id="phaseRemainCount">0</span>
             </div>
+            <div class="phase-stat-divider" aria-hidden="true"></div>
+            <div class="phase-stat-chip starred" id="phaseStarredChip" title="Click to filter Starred / Important problems in this track" role="button" tabindex="0">
+              <span class="ps-star">★</span>
+              <span class="ps-label">Starred</span>
+              <span class="ps-val" id="phaseStarredCount">0</span>
+            </div>
           </div>
         </div>
 
@@ -257,6 +263,11 @@
           <input type="search" id="searchBox" placeholder="Search problem id, e.g. CSES-1082…" autocomplete="off">
           <select id="fileSelect"><option value="">All files</option></select>
           <select id="phaseSelect"><option value="">All blocks</option></select>
+          <label class="chk-label star-filter-chk" title="Show only starred important problems">
+            <input type="checkbox" id="flaggedOnly">
+            <span class="star-filter-icon">★</span> Starred only
+            <span id="flagCount" class="star-filter-count"></span>
+          </label>
           <label class="chk-label"><input type="checkbox" id="hideSolved"> Hide solved</label>
           <label class="chk-label"><input type="checkbox" id="expandAllChk"> Expand</label>
         </div>
@@ -392,13 +403,13 @@
       <dt><kbd>Esc</kbd></dt><dd>Clear the search</dd>
       <dt><kbd>1</kbd>–<kbd>7</kbd></dt><dd>Dashboard · Routine · Checklist · Templates · Contests · Profile · Settings</dd>
       <dt><kbd>e</kbd> / <kbd>E</kbd></dt><dd>Expand / collapse all sections</dd>
-      <dt><kbd>f</kbd></dt><dd>Toggle flagged-only</dd>
+      <dt><kbd>f</kbd></dt><dd>Toggle starred / important only</dd>
       <dt><kbd>n</kbd></dt><dd>Jump to a random unsolved problem in view</dd>
       <dt><kbd>t</kbd> / <kbd>T</kbd></dt><dd>Start-pause / reset the time-box timer</dd>
       <dt><kbd>z</kbd></dt><dd>Toggle Focus / Zen mode (hide or show topbar)</dd>
       <dt><kbd>?</kbd></dt><dd>Show or hide this</dd>
     </dl>
-    <p>Right-click or <kbd>Alt</kbd>+click a problem to flag it for revision.</p>
+    <p>Click the star on any problem or right-click to mark it as important.</p>
   </div>
 
   <footer class="app-footer">
@@ -460,7 +471,7 @@
 
 <div id="printRoot" aria-hidden="true"></div>
 
-<script src="script.js?v=cbbdaec8"></script>
+<script src="script.js?v=30c17b02"></script>
 <script src="prayer.js?v=06919d6a"></script>
 <script src="routine.js?v=3519941c"></script>
 <script src="timer.js?v=6bfcb00f"></script>
@@ -468,7 +479,7 @@
 <script src="contests.js?v=c5893920"></script>
 <script src="account.js?v=217a4747"></script>
 <script src="settings.js?v=98a2cfc8"></script>
-<script src="dashboard.js?v=125a90bb"></script>
+<script src="dashboard.js?v=d4c75d39"></script>
 <script src="admin.js?v=99c615d6"></script>
 </body>
 </html>

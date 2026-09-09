@@ -656,11 +656,6 @@
           <h2>Solving Analytics &amp; Activity Dashboard</h2>
           <p class="db-header-sub">Track daily problem throughput, phase timelines, consistency streaks, and velocity runway.</p>
         </div>
-        <div class="db-header-actions">
-          <a href="#" data-goto-tab="checklist" class="btn primary">Go to Checklist →</a>
-          <a href="#" data-goto-tab="routine" class="btn">View Routine</a>
-          <a href="#" data-goto-tab="settings" class="btn">Settings</a>
-        </div>
       </div>
 
       ${kpiHtml}

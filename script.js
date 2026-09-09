@@ -729,49 +729,18 @@
     return chip;
   }
 
-  function mountChipsForCard(card, progressive = false) {
+  function mountChipsForCard(card) {
     if (!card || card._renderedChips) return;
     const items = card._items;
     const grid = card._grid;
     if (!items || !items.length || !grid) return;
 
-    if (!progressive || items.length <= 40) {
-      const frag = document.createDocumentFragment();
-      items.forEach(it => {
-        frag.appendChild(createChipElement(it));
-      });
-      grid.appendChild(frag);
-      card._renderedChips = true;
-      return;
-    }
-
-    // Progressive rendering: render first 40 immediately, batch the rest via requestAnimationFrame
     const frag = document.createDocumentFragment();
-    const initialBatch = Math.min(40, items.length);
-    for (let i = 0; i < initialBatch; i++) {
+    for (let i = 0; i < items.length; i++) {
       frag.appendChild(createChipElement(items[i]));
     }
     grid.appendChild(frag);
-
-    let idx = initialBatch;
-    function renderNextChunk() {
-      if (!card.isConnected || idx >= items.length) {
-        card._renderedChips = true;
-        return;
-      }
-      const chunkFrag = document.createDocumentFragment();
-      const limit = Math.min(idx + 40, items.length);
-      for (; idx < limit; idx++) {
-        chunkFrag.appendChild(createChipElement(items[idx]));
-      }
-      grid.appendChild(chunkFrag);
-      if (idx < items.length) {
-        requestAnimationFrame(renderNextChunk);
-      } else {
-        card._renderedChips = true;
-      }
-    }
-    requestAnimationFrame(renderNextChunk);
+    card._renderedChips = true;
   }
 
   function buildAccordions() {
@@ -858,11 +827,12 @@
           <span class="sec-count">${sd}/${st}</span>
           <div class="bar sec-mini-bar"><i style="width:${st ? (100*sd/st).toFixed(1) : 0}%"></i></div>`;
         head.addEventListener("click", () => {
-          const isOpen = card.classList.toggle("open");
-          if (isOpen) {
+          if (!card.classList.contains("open")) {
+            mountChipsForCard(card);
+            card.classList.add("open");
             openSecIds.add(sec._id);
-            mountChipsForCard(card, true);
           } else {
+            card.classList.remove("open");
             openSecIds.delete(sec._id);
           }
           updateExpandAllCheckbox();

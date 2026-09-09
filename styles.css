@@ -1088,8 +1088,6 @@
   /* ---------- Accordions ---------- */
   .file-block {
     margin-bottom: 1.8rem;
-    content-visibility: auto;
-    contain-intrinsic-size: auto 90px;
   }
   .file-head {
     display: flex; align-items: baseline; gap: 0.7rem; padding: 0.5rem 0.1rem; border-bottom: 2px solid var(--line);
@@ -1106,13 +1104,10 @@
     border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface);
     margin-bottom: 0.5rem; box-shadow: var(--shadow-sm);
     transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
-    content-visibility: auto;
-    contain-intrinsic-size: auto 46px;
   }
   .sec-card:hover { border-color: var(--line-strong); }
   .sec-card.open {
     box-shadow: var(--shadow-md);
-    contain-intrinsic-size: auto 240px;
   }
   .sec-head {
     display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.85rem; cursor: pointer; user-select: none;
@@ -1143,7 +1138,7 @@
   }
   .sec-card.open .sec-body {
     grid-template-rows: 1fr;
-    padding: 0 0.85rem 0.85rem;
+    padding: 0 0.85rem 1rem;
   }
   .sec-body-inner {
     overflow: hidden;
@@ -1155,6 +1150,7 @@
   .sec-card.open .sec-body-inner {
     opacity: 1;
     transform: translateY(0);
+    overflow: visible;
   }
   .sec-actions { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
   .sec-actions button {
@@ -1163,15 +1159,33 @@
   }
   .sec-actions button:hover { border-color: var(--accent); color: var(--accent-ink); }
   .chip-grid {
-    display: flex; flex-wrap: wrap; gap: 0.4rem;
-    contain: layout style;
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: 0.58rem;
+    column-gap: 0.46rem;
+    padding: 0.2rem 0 0.6rem 0;
+    align-items: center;
   }
 
   .chip {
-    font-family: ui-monospace, monospace; font-size: 0.78rem; border: 1px solid var(--line);
-    background: var(--surface-2); color: var(--ink); border-radius: var(--r-sm); padding: 0.32rem 0.55rem;
-    cursor: pointer; display: inline-flex; align-items: center; gap: 0.32rem; line-height: 1.1;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.78rem;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--ink);
+    border-radius: var(--r-sm);
+    padding: 0.36rem 0.58rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.34rem;
+    line-height: 1.25;
     border-left-width: 3px;
+    box-sizing: border-box;
+    vertical-align: middle;
+    position: relative;
+    user-select: none;
+    touch-action: manipulation;
     transition: border-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
                 background-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
                 color 0.24s cubic-bezier(0.16, 1, 0.3, 1),

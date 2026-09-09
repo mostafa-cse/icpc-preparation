@@ -1042,7 +1042,11 @@
   .btn-row { display: flex; gap: 0.5rem; margin-left: auto; flex-wrap: wrap; align-items: center; }
 
   /* ---------- Accordions ---------- */
-  .file-block { margin-bottom: 1.8rem; }
+  .file-block {
+    margin-bottom: 1.8rem;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 90px;
+  }
   .file-head {
     display: flex; align-items: baseline; gap: 0.7rem; padding: 0.5rem 0.1rem; border-bottom: 2px solid var(--line);
     margin-bottom: 0.6rem; flex-wrap: wrap;
@@ -1058,9 +1062,14 @@
     border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface);
     margin-bottom: 0.5rem; box-shadow: var(--shadow-sm);
     transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+    content-visibility: auto;
+    contain-intrinsic-size: auto 46px;
   }
   .sec-card:hover { border-color: var(--line-strong); }
-  .sec-card.open { box-shadow: var(--shadow-md); }
+  .sec-card.open {
+    box-shadow: var(--shadow-md);
+    contain-intrinsic-size: auto 240px;
+  }
   .sec-head {
     display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.85rem; cursor: pointer; user-select: none;
   }
@@ -1084,7 +1093,10 @@
     border-radius: 5px; padding: 0.25rem 0.55rem; cursor: pointer;
   }
   .sec-actions button:hover { border-color: var(--accent); color: var(--accent-ink); }
-  .chip-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .chip-grid {
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+    contain: layout style;
+  }
 
   .chip {
     font-family: ui-monospace, monospace; font-size: 0.78rem; border: 1px solid var(--line);

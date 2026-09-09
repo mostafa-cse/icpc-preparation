@@ -141,11 +141,13 @@
     (DATA[file] || []).forEach(sec => {
       sec._id = file + "::" + (secCounter++);
       sec._file = file;
+      sec._searchStr = (sec.breadcrumb + " " + (sec.subsection || "")).toLowerCase();
       const seen = new Set();
       sec._items2 = [];
       sec.items.forEach(it => {
         if (seen.has(it.id)) return;
         seen.add(it.id);
+        it._searchStr = (it.id + " " + (it.label || "")).toLowerCase();
         sec._items2.push(it);
         allIds.add(it.id);
         byFileIds[file].add(it.id);
@@ -195,18 +197,61 @@
     try { localStorage.setItem(DATES_KEY, JSON.stringify(solveDates)); } catch (e) {}
   }
 
-  function persistLocal() {
-    localStorage.setItem(CACHE_KEY, JSON.stringify([...solved]));
-    localStorage.setItem(FLAG_KEY, JSON.stringify([...flagged]));
-    localStorage.setItem(DATES_KEY, JSON.stringify(solveDates));
-  }
-  function persist() {
-    persistLocal();
-    const sync = window.ICPCProgress && window.ICPCProgress.onChange;
-    if (typeof sync === "function") sync([...solved], [...flagged]);
+  // Non-blocking batched persistence: buffers localStorage writes by 150ms and
+  // sync by 200ms, eliminating synchronous JSON.stringify freezes on rapid clicks.
+  let persistTimer = null;
+  let syncTimer = null;
+  let isDirty = false;
+
+  function flushPersist() {
+    if (!isDirty) return;
+    if (persistTimer) { clearTimeout(persistTimer); persistTimer = null; }
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify([...solved]));
+      localStorage.setItem(FLAG_KEY, JSON.stringify([...flagged]));
+      localStorage.setItem(DATES_KEY, JSON.stringify(solveDates));
+      isDirty = false;
+    } catch (e) {
+      console.error("Failed to batch save progress:", e);
+    }
   }
 
-  let filters = { text: "", file: "", phase: "", hideSolved: false, deepOnly: false, flaggedOnly: false };
+  function persistLocal(immediate = false) {
+    isDirty = true;
+    if (immediate) {
+      flushPersist();
+      return;
+    }
+    if (persistTimer) clearTimeout(persistTimer);
+    persistTimer = setTimeout(flushPersist, 150);
+  }
+
+  function persist(immediate = false) {
+    persistLocal(immediate);
+    if (syncTimer) clearTimeout(syncTimer);
+    const sync = window.ICPCProgress && window.ICPCProgress.onChange;
+    if (typeof sync === "function") {
+      if (immediate) {
+        sync([...solved], [...flagged]);
+      } else {
+        syncTimer = setTimeout(() => {
+          sync([...solved], [...flagged]);
+        }, 200);
+      }
+    }
+  }
+
+  window.addEventListener("beforeunload", () => {
+    flushPersist();
+    const sync = window.ICPCProgress && window.ICPCProgress.onChange;
+    if (syncTimer && typeof sync === "function") {
+      clearTimeout(syncTimer);
+      sync([...solved], [...flagged]);
+    }
+  });
+  window.addEventListener("pagehide", flushPersist);
+
+  let filters = { text: "", textLower: "", file: "", phase: "", hideSolved: false, deepOnly: false, flaggedOnly: false };
 
   // ---------- Counting ----------
   function countSet(idSet) {
@@ -552,18 +597,104 @@
     if (filters.hideSolved && solved.has(it.id)) return false;
     if (filters.deepOnly && !it.deepCut) return false;
     if (filters.flaggedOnly && !flagged.has(it.id)) return false;
-    if (filters.text) {
-      const t = filters.text.toLowerCase();
-      const hay = (it.id + " " + (it.label || "")).toLowerCase();
-      if (hay.indexOf(t) === -1) return false;
+    if (filters.textLower) {
+      if (it._searchStr.indexOf(filters.textLower) === -1) return false;
     }
     return true;
+  }
+
+  function createChipElement(it) {
+    const isStarred = flagged.has(it.id);
+    const chip = document.createElement("span");
+    chip.className = "chip" + (solved.has(it.id) ? " solved" : "") +
+      (isStarred ? " flagged starred" : "") + (it.deepCut ? " deep" : "") +
+      (it.difficulty === "Easy" || it.difficulty === "Very Easy" ? " diff-easy" : "") +
+      (it.difficulty === "Hard" || it.difficulty === "Very Hard" || it.difficulty === "Insane" ? " diff-hard" : "");
+    chip.dataset.id = it.id;
+    if (it.note) chip.title = it.note;
+    const label = it.kind === "link" ? (it.label || it.id) : displayId(it.id);
+    chip.innerHTML = `<button type="button" class="star-btn${isStarred ? ' active' : ''}" title="${isStarred ? 'Starred as important (click to unstar)' : 'Star as important'}" aria-label="${isStarred ? 'Starred as important (click to unstar)' : 'Star as important'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="${isStarred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></button><span class="lbl">${esc(label)}</span><a class="go" href="${esc(linkFor(it))}" target="_blank" rel="noopener noreferrer" title="Open problem">↗</a>`;
+    const starBtn = chip.querySelector(".star-btn");
+    if (starBtn) {
+      starBtn.addEventListener("click", e => {
+        e.stopPropagation();
+        e.preventDefault();
+        toggleFlag(it.id);
+      });
+    }
+    const lbl = chip.querySelector(".lbl");
+    lbl.title = "Click to mark solved · Star to mark important";
+    lbl.addEventListener("click", e => {
+      if (e.altKey) { toggleFlag(it.id); return; }
+      const nowIso = new Date().toISOString().slice(0, 10);
+      if (solved.has(it.id)) {
+        solved.delete(it.id);
+        delete solveDates[it.id];
+      } else {
+        solved.add(it.id);
+        solveDates[it.id] = nowIso;
+      }
+      persist();
+      updateChipsForId(it.id);
+      refreshCounters();
+    });
+    lbl.addEventListener("contextmenu", e => { e.preventDefault(); toggleFlag(it.id); });
+
+    if (!chipRegistry.has(it.id)) chipRegistry.set(it.id, []);
+    chipRegistry.get(it.id).push(chip);
+    return chip;
+  }
+
+  function mountChipsForCard(card, progressive = false) {
+    if (!card || card._renderedChips) return;
+    const items = card._items;
+    const grid = card._grid;
+    if (!items || !items.length || !grid) return;
+
+    if (!progressive || items.length <= 40) {
+      const frag = document.createDocumentFragment();
+      items.forEach(it => {
+        frag.appendChild(createChipElement(it));
+      });
+      grid.appendChild(frag);
+      card._renderedChips = true;
+      return;
+    }
+
+    // Progressive rendering: render first 40 immediately, batch the rest via requestAnimationFrame
+    const frag = document.createDocumentFragment();
+    const initialBatch = Math.min(40, items.length);
+    for (let i = 0; i < initialBatch; i++) {
+      frag.appendChild(createChipElement(items[i]));
+    }
+    grid.appendChild(frag);
+
+    let idx = initialBatch;
+    function renderNextChunk() {
+      if (!card.isConnected || idx >= items.length) {
+        card._renderedChips = true;
+        return;
+      }
+      const chunkFrag = document.createDocumentFragment();
+      const limit = Math.min(idx + 40, items.length);
+      for (; idx < limit; idx++) {
+        chunkFrag.appendChild(createChipElement(items[idx]));
+      }
+      grid.appendChild(chunkFrag);
+      if (idx < items.length) {
+        requestAnimationFrame(renderNextChunk);
+      } else {
+        card._renderedChips = true;
+      }
+    }
+    requestAnimationFrame(renderNextChunk);
   }
 
   function buildAccordions() {
     fileAccordions.innerHTML = "";
     chipRegistry.clear();
     let anySectionVisible = false;
+    const accordionsFrag = document.createDocumentFragment();
 
     FILES.forEach(file => {
       if (filters.file && filters.file !== file) return;
@@ -600,11 +731,6 @@
       block.appendChild(secWrap);
 
       const fileHead = block.querySelector(".file-head");
-      // `hidden` rather than a CSS class alone. This is a static site with no
-      // build step, so a browser can hold a stale styles.css while already
-      // running the new script.js — and then the click would toggle a class
-      // nothing styles yet, and the feature would look broken. The UA
-      // stylesheet gives [hidden] display:none, so this works regardless.
       const applyFileState = () => {
         const closed = block.classList.contains("closed");
         secWrap.hidden = closed;
@@ -622,6 +748,8 @@
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleFile(); }
       });
 
+      const secWrapFrag = document.createDocumentFragment();
+
       visibleSecs.forEach(({ sec, items }) => {
         const uniqueIds = sec._uniqueIds || (sec._uniqueIds = [...new Set(sec._items2.map(x => x.id))]);
         const sd = countSet(uniqueIds), st = uniqueIds.length;
@@ -629,6 +757,8 @@
         card.className = "sec-card";
         card.dataset.secId = sec._id;
         card._sec = sec;
+        card._items = items;
+        card._renderedChips = false;
         const forceOpen = !!(filters.text || filters.hideSolved || filters.deepOnly || filters.flaggedOnly);
         if (forceOpen || openSecIds.has(sec._id)) card.classList.add("open");
 
@@ -641,7 +771,12 @@
           <div class="bar sec-mini-bar"><i style="width:${st ? (100*sd/st).toFixed(1) : 0}%"></i></div>`;
         head.addEventListener("click", () => {
           const isOpen = card.classList.toggle("open");
-          if (isOpen) openSecIds.add(sec._id); else openSecIds.delete(sec._id);
+          if (isOpen) {
+            openSecIds.add(sec._id);
+            mountChipsForCard(card, true);
+          } else {
+            openSecIds.delete(sec._id);
+          }
         });
 
         const body = document.createElement("div");
@@ -650,6 +785,7 @@
         actions.className = "sec-actions";
         actions.innerHTML = `<button type="button" data-act="all">Mark section solved</button><button type="button" data-act="none">Clear section</button>`;
         actions.querySelector('[data-act="all"]').addEventListener("click", () => {
+          mountChipsForCard(card, false);
           const nowIso = new Date().toISOString().slice(0, 10);
           items.forEach(it => {
             solved.add(it.id);
@@ -659,6 +795,7 @@
           persist(); refreshCounters();
         });
         actions.querySelector('[data-act="none"]').addEventListener("click", () => {
+          mountChipsForCard(card, false);
           items.forEach(it => {
             solved.delete(it.id);
             delete solveDates[it.id];
@@ -670,58 +807,24 @@
 
         const grid = document.createElement("div");
         grid.className = "chip-grid";
-        items.forEach(it => {
-          const isStarred = flagged.has(it.id);
-          const chip = document.createElement("span");
-          chip.className = "chip" + (solved.has(it.id) ? " solved" : "") +
-            (isStarred ? " flagged starred" : "") + (it.deepCut ? " deep" : "") +
-            (it.difficulty === "Easy" || it.difficulty === "Very Easy" ? " diff-easy" : "") +
-            (it.difficulty === "Hard" || it.difficulty === "Very Hard" || it.difficulty === "Insane" ? " diff-hard" : "");
-          chip.dataset.id = it.id;
-          if (it.note) chip.title = it.note;
-          const label = it.kind === "link" ? (it.label || it.id) : displayId(it.id);
-          chip.innerHTML = `<button type="button" class="star-btn${isStarred ? ' active' : ''}" title="${isStarred ? 'Starred as important (click to unstar)' : 'Star as important'}" aria-label="${isStarred ? 'Starred as important (click to unstar)' : 'Star as important'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="${isStarred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></button><span class="lbl">${esc(label)}</span><a class="go" href="${esc(linkFor(it))}" target="_blank" rel="noopener noreferrer" title="Open problem">↗</a>`;
-          const starBtn = chip.querySelector(".star-btn");
-          if (starBtn) {
-            starBtn.addEventListener("click", e => {
-              e.stopPropagation();
-              e.preventDefault();
-              toggleFlag(it.id);
-            });
-          }
-          const lbl = chip.querySelector(".lbl");
-          lbl.title = "Click to mark solved · Star to mark important";
-          lbl.addEventListener("click", e => {
-            // Alt+click flags instead, for trackpads and anyone who would
-            // rather not reach for the context menu.
-            if (e.altKey) { toggleFlag(it.id); return; }
-            const nowIso = new Date().toISOString().slice(0, 10);
-            if (solved.has(it.id)) {
-              solved.delete(it.id);
-              delete solveDates[it.id];
-            } else {
-              solved.add(it.id);
-              solveDates[it.id] = nowIso;
-            }
-            persist();
-            updateChipsForId(it.id);
-            refreshCounters();
-          });
-          lbl.addEventListener("contextmenu", e => { e.preventDefault(); toggleFlag(it.id); });
-          grid.appendChild(chip);
-          if (!chipRegistry.has(it.id)) chipRegistry.set(it.id, []);
-          chipRegistry.get(it.id).push(chip);
-        });
+        card._grid = grid;
         body.appendChild(grid);
 
         card.appendChild(head);
         card.appendChild(body);
-        secWrap.appendChild(card);
+
+        if (card.classList.contains("open")) {
+          mountChipsForCard(card, false);
+        }
+
+        secWrapFrag.appendChild(card);
       });
 
-      fileAccordions.appendChild(block);
+      secWrap.appendChild(secWrapFrag);
+      accordionsFrag.appendChild(block);
     });
 
+    fileAccordions.appendChild(accordionsFrag);
     emptyNote.style.display = anySectionVisible ? "none" : "block";
   }
 
@@ -749,7 +852,10 @@
 
   function expandMatching() {
     if (filters.text || filters.hideSolved || filters.deepOnly || filters.flaggedOnly) {
-      document.querySelectorAll(".sec-card").forEach(c => c.classList.add("open"));
+      document.querySelectorAll(".sec-card").forEach(c => {
+        c.classList.add("open");
+        mountChipsForCard(c, false);
+      });
     }
   }
 
@@ -773,9 +879,8 @@
         if (solved.has(it.id) || seen.has(it.id)) return;
         if (filters.deepOnly && !it.deepCut) return;
         if (filters.flaggedOnly && !flagged.has(it.id)) return;
-        if (filters.text) {
-          const hay = (it.id + " " + (it.label || "")).toLowerCase();
-          if (hay.indexOf(filters.text.toLowerCase()) === -1) return;
+        if (filters.textLower) {
+          if (it._searchStr.indexOf(filters.textLower) === -1) return;
         }
         seen.add(it.id);
         pool.push({ it, sec });
@@ -790,6 +895,7 @@
     if (card) {
       card.classList.add("open");
       openSecIds.add(pick.sec._id);
+      mountChipsForCard(card, false);
     }
     // chipRegistry holds every chip currently in the DOM for an id; a problem
     // can appear in more than one section, so take the one just opened.
@@ -854,7 +960,26 @@
 
   // ---------- Filter bar wiring ----------
   const searchBox = document.getElementById("searchBox");
-  if (searchBox) searchBox.addEventListener("input", e => { filters.text = e.target.value.trim(); applyFilters(); });
+  let searchDebounceTimer = null;
+  function updateSearchFilter(val, isImmediate = false) {
+    if (searchDebounceTimer) { clearTimeout(searchDebounceTimer); searchDebounceTimer = null; }
+    filters.text = val;
+    filters.textLower = val.toLowerCase();
+    applyFilters();
+  }
+  if (searchBox) {
+    searchBox.addEventListener("input", e => {
+      const val = e.target.value.trim();
+      if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+      if (val === "" || !e.isTrusted) {
+        updateSearchFilter(val, true);
+      } else {
+        searchDebounceTimer = setTimeout(() => {
+          updateSearchFilter(val, false);
+        }, 150);
+      }
+    });
+  }
   const fileSelect = document.getElementById("fileSelect");
   if (fileSelect) {
     FILES.forEach(f => { const o = document.createElement("option"); o.value = f; o.textContent = f.replace(".md",""); fileSelect.appendChild(o); });
@@ -907,6 +1032,7 @@
     document.querySelectorAll(".sec-card").forEach(c => {
       c.classList.toggle("open", open);
       if (c.dataset.secId) { if (open) openSecIds.add(c.dataset.secId); else openSecIds.delete(c.dataset.secId); }
+      if (open) mountChipsForCard(c, false);
     });
     document.querySelectorAll(".file-block").forEach(b => {
       b.classList.toggle("closed", !open);
@@ -1342,7 +1468,7 @@
     const active = document.activeElement;
 
     if (e.key === "Escape" && active === searchBox) {
-      if (searchBox.value) { searchBox.value = ""; filters.text = ""; applyFilters(); }
+      if (searchBox.value) { searchBox.value = ""; updateSearchFilter("", true); }
       searchBox.blur();
       return;
     }

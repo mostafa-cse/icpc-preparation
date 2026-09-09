@@ -787,6 +787,66 @@ $$;
 -- Execute privileges are set in one place, at the end of this file.
 
 
+-- ============================================================================
+-- 10. Consolidated Fast Hydration (Fixes N+1 and Multi-roundtrip latency)
+-- Returns user settings, solved problems, and notebook templates in 1 call.
+-- ============================================================================
+create or replace function public.get_user_bundle()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+  result jsonb;
+begin
+  if uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if not public.is_approved() then
+    raise exception 'Account not approved';
+  end if;
+
+  select jsonb_build_object(
+    'settings', (
+      select to_jsonb(s) from public.user_settings s where s.user_id = uid
+    ),
+    'progress', (
+      select coalesce(jsonb_agg(
+        jsonb_build_object(
+          'p', pp.problem_id,
+          'f', pp.flagged,
+          'd', to_char(pp.solved_at, 'YYYY-MM-DD')
+        )
+      ), '[]'::jsonb)
+      from public.problem_progress pp
+      where pp.user_id = uid and pp.status = 'solved'
+    ),
+    'templates', (
+      select coalesce(jsonb_agg(
+        jsonb_build_object(
+          'id', t.id,
+          'title', t.title,
+          'category', t.category,
+          'description', coalesce(t.description, ''),
+          'timeComplexity', coalesce(t.time_complexity, ''),
+          'spaceComplexity', coalesce(t.space_complexity, ''),
+          'code', coalesce(t.code, ''),
+          'createdAt', t.created_at
+        ) order by t.category, t.position
+      ), '[]'::jsonb)
+      from public.templates t
+      where t.user_id = uid
+    )
+  ) into result;
+
+  return result;
+end;
+$$;
+
+
 -- Grandfathering of pre-existing accounts happens in section 1, at the moment
 -- the status column is introduced — not here, so that re-running this file
 -- never approves a queue of waiting signups.
@@ -819,6 +879,7 @@ declare
   api text[] := array[
     'public.is_admin()',
     'public.is_approved()',
+    'public.get_user_bundle()',
     'public.admin_list_users()',
     'public.admin_set_role(uuid, text)',
     'public.admin_set_status(uuid, public.account_status, text)'

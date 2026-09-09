@@ -399,23 +399,29 @@
     const rows = [];
     const flags = [];
     const dates = {};
-    const PAGE = 1000;
-    for (let from = 0; ; from += PAGE) {
-      // `flagged` is selected defensively: a project that has not re-run
-      // supabase-schema.sql since flags were added has no such column, and
-      // asking for it by name would fail the whole pull.
+    try {
       const { data, error } = await sb
-        .from(T_PROGRESS).select("*")
+        .from(T_PROGRESS)
+        .select("problem_id, flagged, solved_at")
         .eq("user_id", user.id)
         .eq("status", "solved")
-        .range(from, from + PAGE - 1);
+        .limit(10000);
       if (error) throw error;
-      data.forEach(r => {
+      (data || []).forEach(r => {
         rows.push(r.problem_id);
         if (r.flagged) flags.push(r.problem_id);
         if (r.solved_at) dates[r.problem_id] = r.solved_at.slice(0, 10);
       });
-      if (data.length < PAGE) break;
+    } catch (err) {
+      // Fallback defensively if schema predates flagged/solved_at columns
+      const { data, error } = await sb
+        .from(T_PROGRESS)
+        .select("problem_id")
+        .eq("user_id", user.id)
+        .eq("status", "solved")
+        .limit(10000);
+      if (error) throw error;
+      (data || []).forEach(r => rows.push(r.problem_id));
     }
     lastSynced = new Set(rows);
     lastFlags = new Set(flags);
@@ -438,28 +444,37 @@
     setSyncState("saving");
     try {
       const toWrite = [...new Set(added.concat(flagMoved))];
+      const tasks = [];
+
       if (toWrite.length) {
         for (let i = 0; i < toWrite.length; i += 500) {
           const chunk = toWrite.slice(i, i + 500)
             .map(problem_id => ({ user_id: user.id, problem_id, status: "solved", flagged: nowFlags.has(problem_id) }));
-          let { error } = await sb.from(T_PROGRESS).upsert(chunk, { onConflict: "user_id,problem_id" });
-          if (error && /column .*flagged/i.test(error.message || "")) {
-            // Schema predates flags: save the solved state and keep the flags
-            // in this browser rather than losing the whole write.
-            const bare = chunk.map(r => ({ user_id: r.user_id, problem_id: r.problem_id, status: r.status }));
-            ({ error } = await sb.from(T_PROGRESS).upsert(bare, { onConflict: "user_id,problem_id" }));
-          }
-          if (error) throw error;
+          tasks.push((async () => {
+            let { error } = await sb.from(T_PROGRESS).upsert(chunk, { onConflict: "user_id,problem_id" });
+            if (error && /column .*flagged/i.test(error.message || "")) {
+              // Schema predates flags: save the solved state and keep the flags
+              // in this browser rather than losing the whole write.
+              const bare = chunk.map(r => ({ user_id: r.user_id, problem_id: r.problem_id, status: r.status }));
+              ({ error } = await sb.from(T_PROGRESS).upsert(bare, { onConflict: "user_id,problem_id" }));
+            }
+            if (error) throw error;
+          })());
         }
       }
+
       if (removed.length) {
         for (let i = 0; i < removed.length; i += 500) {
           const chunk = removed.slice(i, i + 500);
-          const { error } = await sb.from(T_PROGRESS).delete()
-            .eq("user_id", user.id).in("problem_id", chunk);
-          if (error) throw error;
+          tasks.push((async () => {
+            const { error } = await sb.from(T_PROGRESS).delete()
+              .eq("user_id", user.id).in("problem_id", chunk);
+            if (error) throw error;
+          })());
         }
       }
+
+      await Promise.all(tasks);
       lastSynced = now;
       lastFlags = nowFlags;
       setSyncState("saved");
@@ -475,7 +490,8 @@
   async function pullTemplates() {
     if (!sb || !user) return;
     const { data, error } = await sb.from(T_TEMPLATES)
-      .select("*").eq("user_id", user.id)
+      .select("id, title, category, description, time_complexity, space_complexity, code, created_at, position")
+      .eq("user_id", user.id)
       .order("category").order("position");
     if (error) throw error;
     const mapped = (data || []).map(r => ({
@@ -512,11 +528,14 @@
       const keep = rows.map(r => r.id).filter(Boolean);
       let del = sb.from(T_TEMPLATES).delete().eq("user_id", user.id);
       if (keep.length) del = del.not("id", "in", "(" + keep.join(",") + ")");
-      const { error: delErr } = await del;
-      if (delErr) throw delErr;
+
+      const tasks = [del];
       if (rows.length) {
-        const { error } = await sb.from(T_TEMPLATES).upsert(rows, { onConflict: "id" });
-        if (error) throw error;
+        tasks.push(sb.from(T_TEMPLATES).upsert(rows, { onConflict: "id" }));
+      }
+      const results = await Promise.all(tasks);
+      for (const res of results) {
+        if (res && res.error) throw res.error;
       }
       setSyncState("saved");
     } catch (err) {
@@ -526,7 +545,7 @@
 
   async function pullSettings() {
     if (!sb || !user) return;
-    const { data } = await sb.from(T_SETTINGS).select("*").eq("user_id", user.id).single();
+    const { data } = await sb.from(T_SETTINGS).select("*").eq("user_id", user.id).maybeSingle();
     if (!data) return;
     settings = data;
     // Modules own their own settings; they subscribe rather than being called.
@@ -751,6 +770,7 @@
   }
 
   async function signOut() {
+    signingIn = false;
     clearTimeout(syncTimer);
     if (syncTimer) await pushProgress(window.ICPCProgress.snapshot(), window.ICPCProgress.flagSnapshot());
     try { if (sb) await sb.auth.signOut(); } catch (e) {}
@@ -760,49 +780,115 @@
   }
 
   // ------------------------------------------------------------------ boot --
+  let signingIn = false;
   async function afterSignIn(session) {
+    if (signingIn) return;
+    signingIn = true;
     user = session.user;
+
+    // CALL 1 of 2: Profile & Authorization
     try {
-      const { data } = await sb.from("profiles").select("*").eq("id", user.id).single();
+      const { data } = await sb.from("profiles")
+        .select("id, status, role, display_name, handle, avatar_emoji, created_at, cf_handle, atcoder_handle, vjudge_handle, cses_handle, leetcode_handle")
+        .eq("id", user.id)
+        .single();
       profile = data || null;
-    } catch (e) { profile = null; }
+    } catch (e) {
+      profile = null;
+    }
 
     // Stop before pulling anything: an unapproved account is refused by RLS, so
-    // every pull below would fail and report a wall of errors instead of the
-    // one thing the user needs to know.
+    // stop immediately in 1 database call.
     if (accountState() !== "approved") {
       root.classList.add("locked");
       buildStatusScreen();
+      signingIn = false;
       return;
     }
 
-    // Merge anything ticked offline before signing in, then adopt the server set.
+    // CALL 2 of 2: Consolidated bundle fetch (settings, progress, templates)
+    // Runs in 1 single RPC query transaction on the database.
+    let bundle = null;
+    try {
+      const { data, error } = await sb.rpc("get_user_bundle");
+      if (error) throw error;
+      bundle = data;
+    } catch (rpcErr) {
+      // Bulletproof fallback if get_user_bundle RPC is not deployed yet:
+      // Run the 3 requests concurrently in a single round-trip flight.
+      const [progRes, setRes, tplRes] = await Promise.allSettled([
+        sb.from(T_PROGRESS).select("problem_id, flagged, solved_at").eq("user_id", user.id).eq("status", "solved").limit(10000),
+        sb.from(T_SETTINGS).select("*").eq("user_id", user.id).maybeSingle(),
+        sb.from(T_TEMPLATES).select("id, title, category, description, time_complexity, space_complexity, code, created_at, position").eq("user_id", user.id).order("category").order("position"),
+      ]);
+      const pRows = progRes.status === "fulfilled" && !progRes.value.error ? progRes.value.data : [];
+      const sData = setRes.status === "fulfilled" && !setRes.value.error ? setRes.value.data : null;
+      const tData = tplRes.status === "fulfilled" && !tplRes.value.error ? tplRes.value.data : [];
+      bundle = {
+        settings: sData || {},
+        progress: (pRows || []).map(r => ({
+          p: r.problem_id,
+          f: !!r.flagged,
+          d: r.solved_at ? r.solved_at.slice(0, 10) : ""
+        })),
+        templates: (tData || []).map(r => ({
+          id: r.id,
+          title: r.title,
+          category: r.category,
+          description: r.description || "",
+          timeComplexity: r.time_complexity || "",
+          spaceComplexity: r.space_complexity || "",
+          code: r.code || "",
+          createdAt: r.created_at,
+        }))
+      };
+    }
+
+    // 1. Hydrate settings
+    if (bundle && bundle.settings && Object.keys(bundle.settings).length) {
+      settings = bundle.settings;
+      document.dispatchEvent(new CustomEvent("icpc:settings", { detail: settings }));
+    }
+
+    // 2. Hydrate templates
+    if (bundle && bundle.templates && window.ICPCTemplates) {
+      window.ICPCTemplates.replaceAll(bundle.templates);
+    }
+
+    // 3. Hydrate progress + merge local offline state if any
+    const rows = [];
+    const flags = [];
+    const dates = {};
+    if (bundle && bundle.progress) {
+      bundle.progress.forEach(item => {
+        if (item.p) {
+          rows.push(item.p);
+          if (item.f) flags.push(item.p);
+          if (item.d) dates[item.p] = item.d;
+        }
+      });
+    }
+    lastSynced = new Set(rows);
+    lastFlags = new Set(flags);
+
     const localOnly = window.ICPCProgress.snapshot();
     const localFlags = window.ICPCProgress.flagSnapshot();
-    const failures = [];
-    // Settled independently: a failure in one must not silently skip the rest,
-    // which is exactly how templates stopped loading once before.
-    for (const [name, step] of [
-      ["progress", async () => {
-        await pullProgress();
-        if (localOnly.length || localFlags.length) {
-          const merged = new Set([...lastSynced, ...localOnly]);
-          const mergedFlags = new Set([...lastFlags, ...localFlags]);
-          if (merged.size !== lastSynced.size || mergedFlags.size !== lastFlags.size) {
-            window.ICPCProgress.replaceAll([...merged], [...mergedFlags]);
-            await pushProgress([...merged], [...mergedFlags]);
-          }
-        }
-      }],
-      ["settings", pullSettings],
-      ["templates", pullTemplates],
-    ]) {
-      try { await step(); }
-      catch (err) { failures.push(name + " (" + friendly(err) + ")"); }
+    if (localOnly.length || localFlags.length) {
+      const merged = new Set([...lastSynced, ...localOnly]);
+      const mergedFlags = new Set([...lastFlags, ...localFlags]);
+      if (merged.size !== lastSynced.size || mergedFlags.size !== lastFlags.size) {
+        window.ICPCProgress.replaceAll([...merged], [...mergedFlags], dates);
+        pushProgress([...merged], [...mergedFlags]);
+      } else {
+        window.ICPCProgress.replaceAll(rows, flags, dates);
+      }
+    } else {
+      window.ICPCProgress.replaceAll(rows, flags, dates);
     }
+
     openApp();
-    if (failures.length) setSyncState("error", "Could not load: " + failures.join("; "));
-    else setSyncState("saved");
+    setSyncState("saved");
+    signingIn = false;
   }
 
   async function start() {

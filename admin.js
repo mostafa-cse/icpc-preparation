@@ -54,13 +54,13 @@
   // ------------------------------------------------------------------ data --
   async function load() {
     if (!sb) return;
-    const { data, error } = await sb.rpc("admin_list_users");
-    if (error) throw error;
-    users = data || [];
-
-    const res = await sb.from("moderation_log")
-      .select("*").order("created_at", { ascending: false }).limit(30);
-    log = res.error ? [] : (res.data || []);
+    const [usersRes, logRes] = await Promise.all([
+      sb.rpc("admin_list_users"),
+      sb.from("moderation_log").select("*").order("created_at", { ascending: false }).limit(30)
+    ]);
+    if (usersRes.error) throw usersRes.error;
+    users = usersRes.data || [];
+    log = logRes.error ? [] : (logRes.data || []);
   }
 
   async function act(id, fn) {

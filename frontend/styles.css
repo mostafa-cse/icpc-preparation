@@ -3248,3 +3248,332 @@
   .db-directive-item strong { display: block; font-size: 0.85rem; color: var(--ink); margin-bottom: 0.15rem; }
   .db-directive-item p { font-size: 0.78rem; color: var(--ink-soft); margin: 0; }
 
+  /* ==========================================================================
+     Opening Webloader — Competitive Programming Fire Flame
+     ========================================================================== */
+  .flame-loader-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    background: radial-gradient(circle at 50% 45%, #180d07 0%, #0c0806 50%, #060505 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+                filter 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+                visibility 0.55s;
+    will-change: opacity, transform, filter;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .flame-loader-overlay.flame-fade-out {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(1.04);
+    filter: blur(6px);
+    pointer-events: none;
+  }
+
+  .flame-loader-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    max-width: 440px;
+    width: 90%;
+    padding: 2rem 1.5rem;
+  }
+
+  /* Background Ambient Radiance */
+  .flame-ambient-radiance {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(255, 87, 34, 0.22) 0%, rgba(255, 152, 0, 0.08) 45%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: ambientPulse 2.8s ease-in-out infinite alternate;
+  }
+
+  @keyframes ambientPulse {
+    0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.7; }
+    100% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  }
+
+  /* Flame Rig Container */
+  .flame-wrapper {
+    position: relative;
+    width: 120px;
+    height: 150px;
+    margin: 0 auto 1.4rem;
+  }
+
+  /* Ground Flame Glow */
+  .flame-glow-ground {
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 24px;
+    background: radial-gradient(ellipse at center, rgba(255, 100, 0, 0.5) 0%, rgba(255, 60, 0, 0.2) 50%, transparent 80%);
+    border-radius: 50%;
+    filter: blur(4px);
+    animation: groundGlowPulse 1.2s ease-in-out infinite alternate;
+  }
+
+  @keyframes groundGlowPulse {
+    0% { opacity: 0.6; transform: translateX(-50%) scaleX(0.9); }
+    100% { opacity: 1; transform: translateX(-50%) scaleX(1.15); }
+  }
+
+  /* Flame Base Assembly */
+  .flame-base {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90px;
+    height: 130px;
+  }
+
+  /* Outer Fiery Tongue */
+  .flame-tongue.outer {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 74px;
+    height: 110px;
+    background: radial-gradient(ellipse at 50% 85%, #ff5722 0%, #ff3d00 45%, #dd2c00 70%, transparent 95%);
+    border-radius: 50% 50% 35% 35% / 65% 65% 35% 35%;
+    filter: drop-shadow(0 0 16px rgba(255, 61, 0, 0.85)) drop-shadow(0 0 35px rgba(255, 110, 0, 0.45));
+    animation: flameFlickerOuter 1.2s ease-in-out infinite alternate;
+    transform-origin: 50% 90%;
+  }
+
+  /* Mid Golden Amber Tongue */
+  .flame-tongue.mid {
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 52px;
+    height: 84px;
+    background: radial-gradient(ellipse at 50% 85%, #ffca28 0%, #ffa000 50%, #ff5722 85%);
+    border-radius: 50% 50% 30% 30% / 60% 60% 40% 40%;
+    filter: drop-shadow(0 0 12px rgba(255, 193, 7, 0.9));
+    animation: flameFlickerMid 0.95s ease-in-out infinite alternate;
+    transform-origin: 50% 90%;
+  }
+
+  /* Inner Core (White-Hot Luminescence) */
+  .flame-tongue.inner {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 32px;
+    height: 56px;
+    background: radial-gradient(ellipse at 50% 80%, #ffffff 0%, #fff9c4 40%, #ffd54f 80%);
+    border-radius: 50% 50% 25% 25% / 60% 60% 40% 40%;
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.95));
+    animation: flameFlickerInner 0.75s ease-in-out infinite alternate;
+    transform-origin: 50% 90%;
+  }
+
+  /* Electric Cyan Blue Base */
+  .flame-tongue.blue-base {
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 38px;
+    height: 18px;
+    background: radial-gradient(ellipse at 50% 40%, #00e5ff 0%, #0288d1 60%, transparent 100%);
+    border-radius: 50% 50% 40% 40%;
+    filter: drop-shadow(0 0 8px #00e5ff);
+    opacity: 0.9;
+    animation: blueBasePulse 1.1s ease-in-out infinite alternate;
+  }
+
+  @keyframes blueBasePulse {
+    0% { transform: translateX(-50%) scale(0.95); opacity: 0.8; }
+    100% { transform: translateX(-50%) scale(1.08); opacity: 1; }
+  }
+
+  /* Code Glyph </ > Glowing in Flame Core */
+  .flame-code-mark {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 15px;
+    font-weight: 900;
+    color: #1a0800;
+    text-shadow: 0 0 4px #ffffff, 0 0 8px #ffb300, 0 0 14px #ff5722;
+    z-index: 5;
+    pointer-events: none;
+    animation: codePulse 1.1s ease-in-out infinite alternate;
+    letter-spacing: -1.5px;
+  }
+
+  @keyframes codePulse {
+    0% { transform: translateX(-50%) scale(0.96); filter: brightness(0.95); }
+    100% { transform: translateX(-50%) scale(1.08); filter: brightness(1.2); }
+  }
+
+  /* Floating Ember Sparks */
+  .flame-sparks {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .flame-spark {
+    position: absolute;
+    bottom: 24px;
+    width: 5px;
+    height: 5px;
+    background: #fff8e1;
+    border-radius: 50%;
+    box-shadow: 0 0 6px #ffb300, 0 0 12px #ff5722;
+    opacity: 0;
+    animation: riseEmber 1.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+  }
+
+  @keyframes flameFlickerOuter {
+    0% {
+      transform: translateX(-50%) scale(1) rotate(-1.5deg);
+      border-radius: 50% 50% 35% 35% / 65% 65% 35% 35%;
+    }
+    30% {
+      transform: translateX(-50%) scaleX(0.95) scaleY(1.05) rotate(1.2deg);
+      border-radius: 46% 54% 38% 32% / 68% 62% 38% 32%;
+    }
+    70% {
+      transform: translateX(-50%) scaleX(1.05) scaleY(0.96) rotate(-2deg);
+      border-radius: 53% 47% 32% 38% / 62% 68% 32% 38%;
+    }
+    100% {
+      transform: translateX(-50%) scaleX(0.97) scaleY(1.04) rotate(1.8deg);
+      border-radius: 48% 52% 36% 34% / 66% 64% 36% 34%;
+    }
+  }
+
+  @keyframes flameFlickerMid {
+    0% { transform: translateX(-50%) scale(1) rotate(1deg); }
+    50% { transform: translateX(-50%) scaleX(1.07) scaleY(0.94) rotate(-1.5deg); }
+    100% { transform: translateX(-50%) scaleX(0.93) scaleY(1.06) rotate(1.2deg); }
+  }
+
+  @keyframes flameFlickerInner {
+    0% { transform: translateX(-50%) scale(1) translateY(0); opacity: 0.92; }
+    50% { transform: translateX(-50%) scaleX(0.91) scaleY(1.1) translateY(-2px); opacity: 1; }
+    100% { transform: translateX(-50%) scaleX(1.09) scaleY(0.93) translateY(1px); opacity: 0.9; }
+  }
+
+  @keyframes riseEmber {
+    0% {
+      transform: translate(0, 0) scale(0.6);
+      opacity: 0;
+    }
+    18% {
+      opacity: 1;
+      transform: translate(calc(var(--dx, 0px) * 0.3), -28px) scale(1);
+    }
+    75% {
+      opacity: 0.85;
+    }
+    100% {
+      transform: translate(var(--dx, 0px), -125px) scale(0.15);
+      opacity: 0;
+    }
+  }
+
+  /* CP Branding Typography */
+  .flame-badge {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #ff9800;
+    background: rgba(255, 152, 0, 0.1);
+    border: 1px solid rgba(255, 152, 0, 0.35);
+    border-radius: var(--r-pill);
+    padding: 0.22rem 0.8rem;
+    margin-bottom: 0.65rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: 0 0 12px rgba(255, 152, 0, 0.2);
+  }
+
+  .flame-badge::before {
+    content: '🔥';
+    font-size: 0.8rem;
+  }
+
+  .flame-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 0 0 0.45rem;
+    background: linear-gradient(90deg, #fff3e0 0%, #ffb74d 30%, #ff7043 65%, #ffb74d 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: flameTextShimmer 3s linear infinite;
+  }
+
+  @keyframes flameTextShimmer {
+    to { background-position: 200% center; }
+  }
+
+  .flame-ticker {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.82rem;
+    color: #ffcc80;
+    margin: 0 0 1.25rem;
+    min-height: 1.25rem;
+    opacity: 0.9;
+    letter-spacing: 0.02em;
+    transition: opacity 0.25s ease;
+  }
+
+  /* Progress Shimmer Track */
+  .flame-progress-track {
+    width: 210px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .flame-progress-bar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent 0%, #ff9800 50%, #ff5722 80%, #ffffff 100%);
+    border-radius: 999px;
+    animation: flameProgress 1.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+    box-shadow: 0 0 10px #ff9800;
+  }
+
+  @keyframes flameProgress {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+

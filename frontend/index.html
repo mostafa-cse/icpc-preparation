@@ -33,12 +33,97 @@
   });
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=ea45119a">
+<link rel="stylesheet" href="styles.css?v=b9ab29e1">
 <script src="theme.js?v=ddf538cb"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script src="supabase-config.js?v=57dadd8f"></script>
 </head>
 <body>
+
+<!-- ========================================================================
+     Opening Webloader — Competitive Programming Fire Flame
+     ======================================================================== -->
+<div id="appFlameLoader" class="flame-loader-overlay" aria-live="polite" aria-label="Loading ICPC Preparation workspace">
+  <div class="flame-ambient-radiance" aria-hidden="true"></div>
+  <div class="flame-loader-card">
+    <div class="flame-wrapper">
+      <div class="flame-glow-ground" aria-hidden="true"></div>
+      <div class="flame-base">
+        <div class="flame-tongue outer"></div>
+        <div class="flame-tongue mid"></div>
+        <div class="flame-tongue inner"></div>
+        <div class="flame-tongue blue-base"></div>
+        <div class="flame-code-mark">&lt;/&gt;</div>
+      </div>
+      <div class="flame-sparks" aria-hidden="true">
+        <span class="flame-spark" style="--dx: -18px; left: 42%; animation-delay: 0.1s;"></span>
+        <span class="flame-spark" style="--dx: 16px; left: 54%; animation-delay: 0.4s;"></span>
+        <span class="flame-spark" style="--dx: -9px; left: 48%; animation-delay: 0.75s;"></span>
+        <span class="flame-spark" style="--dx: 22px; left: 58%; animation-delay: 1.1s;"></span>
+        <span class="flame-spark" style="--dx: -22px; left: 38%; animation-delay: 1.4s;"></span>
+        <span class="flame-spark" style="--dx: 8px; left: 51%; animation-delay: 1.65s;"></span>
+      </div>
+    </div>
+    <div class="flame-badge">ICPC FINAL SPRINT</div>
+    <h2 class="flame-title">IGNITING WORKSPACE</h2>
+    <p class="flame-ticker" id="flameTicker">Compiling algorithmic training sets...</p>
+    <div class="flame-progress-track" aria-hidden="true">
+      <div class="flame-progress-bar"></div>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  var startTime = Date.now();
+  var MIN_DISPLAY_MS = 1250;
+  var dismissed = false;
+
+  var tips = [
+    "Compiling algorithmic training sets...",
+    "Igniting daily problem streak...",
+    "Analyzing time complexity O(N log N)...",
+    "Optimal substructure identified...",
+    "Synchronizing with ICPC archives..."
+  ];
+  var tipIdx = 0;
+  var tickerEl = document.getElementById("flameTicker");
+  var interval = setInterval(function() {
+    if (dismissed || !tickerEl) { clearInterval(interval); return; }
+    tipIdx = (tipIdx + 1) % tips.length;
+    tickerEl.style.opacity = "0";
+    setTimeout(function() {
+      if (tickerEl) {
+        tickerEl.textContent = tips[tipIdx];
+        tickerEl.style.opacity = "0.9";
+      }
+    }, 180);
+  }, 1050);
+
+  window.dismissFlameLoader = function() {
+    if (dismissed) return;
+    dismissed = true;
+    clearInterval(interval);
+    var elapsed = Date.now() - startTime;
+    var delay = Math.max(0, MIN_DISPLAY_MS - elapsed);
+
+    setTimeout(function() {
+      var loader = document.getElementById("appFlameLoader");
+      if (!loader) return;
+      loader.classList.add("flame-fade-out");
+      setTimeout(function() {
+        if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
+      }, 600);
+    }, delay);
+  };
+
+  // Failsafe auto-dismiss after 2.8s max
+  setTimeout(function() {
+    if (!dismissed && typeof window.dismissFlameLoader === "function") {
+      window.dismissFlameLoader();
+    }
+  }, 2800);
+})();
+</script>
 
 <header class="topbar cp-topbar">
   <div class="cp-topbar-left">
@@ -477,7 +562,7 @@
 <script src="timer.js?v=6bfcb00f"></script>
 <script src="templates.js?v=c2f46bc6"></script>
 <script src="contests.js?v=c5893920"></script>
-<script src="account.js?v=9230949c"></script>
+<script src="account.js?v=8f99d36b"></script>
 <script src="settings.js?v=17c34992"></script>
 <script src="dashboard.js?v=f5182f43"></script>
 <script src="admin.js?v=fb31bafd"></script>

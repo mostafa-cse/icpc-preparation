@@ -977,15 +977,23 @@
       }
     });
 
-    // Checked as well as the event: whether PASSWORD_RECOVERY fires depends on
-    // the token still being valid, but arriving on the link at all should show
-    // the screen either way.
-    if (ARRIVED_ON_RESET) { buildResetScreen(); return; }
+    if (ARRIVED_ON_RESET) {
+      buildResetScreen();
+      if (typeof window.dismissFlameLoader === "function") window.dismissFlameLoader();
+      return;
+    }
 
     const { data } = await sb.auth.getSession();
-    if (recovering) return;
-    if (data && data.session) await afterSignIn(data.session);
-    else buildGate();
+    if (recovering) {
+      if (typeof window.dismissFlameLoader === "function") window.dismissFlameLoader();
+      return;
+    }
+    if (data && data.session) {
+      await afterSignIn(data.session);
+    } else {
+      buildGate();
+    }
+    if (typeof window.dismissFlameLoader === "function") window.dismissFlameLoader();
   }
 
   async function updateProfile(patch) {

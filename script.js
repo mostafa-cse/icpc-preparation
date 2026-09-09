@@ -512,6 +512,11 @@
   const emptyNote = document.getElementById("emptyNote");
   const chipRegistry = new Map(); // id -> array of chip elements currently in DOM
   const openSecIds = new Set(); // sections the user has manually expanded — survives rebuilds
+  let staggerTimerIds = [];
+  function clearStaggerQueue() {
+    staggerTimerIds.forEach(id => clearTimeout(id));
+    staggerTimerIds = [];
+  }
   // Whole source files the user has folded away. Six files and 593 sections is
   // a lot of scrolling when you only care about one of them.
   const CLOSED_FILES_KEY = "icpc_closed_files";
@@ -707,6 +712,7 @@
   }
 
   function buildAccordions() {
+    clearStaggerQueue();
     fileAccordions.innerHTML = "";
     chipRegistry.clear();
     let anySectionVisible = false;
@@ -744,12 +750,14 @@
         </div>`;
       const secWrap = document.createElement("div");
       secWrap.className = "file-secs-wrap";
+      const secWrapInner = document.createElement("div");
+      secWrapInner.className = "file-secs-inner";
+      secWrap.appendChild(secWrapInner);
       block.appendChild(secWrap);
 
       const fileHead = block.querySelector(".file-head");
       const applyFileState = () => {
         const closed = block.classList.contains("closed");
-        secWrap.hidden = closed;
         fileHead.setAttribute("aria-expanded", closed ? "false" : "true");
       };
       const toggleFile = () => {
@@ -757,6 +765,7 @@
         if (closed) closedFiles.add(file); else closedFiles.delete(file);
         localStorage.setItem(CLOSED_FILES_KEY, JSON.stringify([...closedFiles]));
         applyFileState();
+        updateExpandAllCheckbox();
       };
       applyFileState();
       fileHead.addEventListener("click", toggleFile);
@@ -793,10 +802,14 @@
           } else {
             openSecIds.delete(sec._id);
           }
+          updateExpandAllCheckbox();
         });
 
         const body = document.createElement("div");
         body.className = "sec-body";
+        const inner = document.createElement("div");
+        inner.className = "sec-body-inner";
+
         const actions = document.createElement("div");
         actions.className = "sec-actions";
         actions.innerHTML = `<button type="button" data-act="all">Mark section solved</button><button type="button" data-act="none">Clear section</button>`;
@@ -819,13 +832,14 @@
           });
           persist(); refreshCounters();
         });
-        body.appendChild(actions);
+        inner.appendChild(actions);
 
         const grid = document.createElement("div");
         grid.className = "chip-grid";
         card._grid = grid;
-        body.appendChild(grid);
+        inner.appendChild(grid);
 
+        body.appendChild(inner);
         card.appendChild(head);
         card.appendChild(body);
 
@@ -836,12 +850,13 @@
         secWrapFrag.appendChild(card);
       });
 
-      secWrap.appendChild(secWrapFrag);
+      secWrapInner.appendChild(secWrapFrag);
       accordionsFrag.appendChild(block);
     });
 
     fileAccordions.appendChild(accordionsFrag);
     emptyNote.style.display = anySectionVisible ? "none" : "block";
+    updateExpandAllCheckbox();
   }
 
   function updateFileAndSectionCounters() {
@@ -1043,24 +1058,101 @@
     if (!pick) setTimeout(() => { nextBtn.textContent = "Next problem →"; }, 1800);
   });
 
-  // Expand/collapse covers both levels: sources and the sections inside them.
+  function updateExpandAllCheckbox() {
+    const expandChk = document.getElementById("expandAllChk");
+    if (!expandChk) return;
+    const cards = document.querySelectorAll(".sec-card");
+    if (!cards.length) { expandChk.checked = false; return; }
+    const allOpen = Array.from(cards).every(c => c.classList.contains("open"));
+    expandChk.checked = allOpen;
+  }
+
+  // Staggered Expand/collapse across file sources and section cards (Task 3.2)
   function setAllOpen(open) {
-    document.querySelectorAll(".sec-card").forEach(c => {
-      c.classList.toggle("open", open);
-      if (c.dataset.secId) { if (open) openSecIds.add(c.dataset.secId); else openSecIds.delete(c.dataset.secId); }
-      if (open) mountChipsForCard(c, false);
-    });
-    document.querySelectorAll(".file-block").forEach(b => {
-      b.classList.toggle("closed", !open);
-      const h = b.querySelector(".file-head");
-      if (h) h.setAttribute("aria-expanded", open ? "true" : "false");
-      const wrap = b.querySelector(".file-secs-wrap");
-      if (wrap) wrap.hidden = !open;
-      if (open) closedFiles.delete(b.dataset.file); else closedFiles.add(b.dataset.file);
-    });
-    localStorage.setItem(CLOSED_FILES_KEY, JSON.stringify([...closedFiles]));
+    clearStaggerQueue();
+
     const expandChk = document.getElementById("expandAllChk");
     if (expandChk && expandChk.checked !== open) expandChk.checked = open;
+
+    const cards = Array.from(document.querySelectorAll(".sec-card"));
+    const fileBlocks = Array.from(document.querySelectorAll(".file-block"));
+    const isReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (open) {
+      // 1. Unclose all file blocks immediately so child sections can cascade smoothly
+      fileBlocks.forEach(b => {
+        b.classList.remove("closed");
+        const h = b.querySelector(".file-head");
+        if (h) h.setAttribute("aria-expanded", "true");
+        closedFiles.delete(b.dataset.file);
+      });
+      localStorage.setItem(CLOSED_FILES_KEY, JSON.stringify([...closedFiles]));
+
+      if (isReducedMotion || cards.length === 0) {
+        cards.forEach(c => {
+          c.classList.add("open");
+          if (c.dataset.secId) openSecIds.add(c.dataset.secId);
+          mountChipsForCard(c, false);
+        });
+        return;
+      }
+
+      // 2. Cascade open all section cards in a sleek waterfall wave
+      const maxTotalCascade = 260; // ms
+      const stepDelay = Math.min(16, Math.max(4, Math.floor(maxTotalCascade / cards.length)));
+
+      cards.forEach((card, idx) => {
+        const delay = idx * stepDelay;
+        const tid = setTimeout(() => {
+          card.classList.add("open");
+          if (card.dataset.secId) openSecIds.add(card.dataset.secId);
+          mountChipsForCard(card, false);
+        }, delay);
+        staggerTimerIds.push(tid);
+      });
+    } else {
+      // Collapse flow
+      if (isReducedMotion || cards.length === 0) {
+        cards.forEach(c => {
+          c.classList.remove("open");
+          if (c.dataset.secId) openSecIds.delete(c.dataset.secId);
+        });
+        fileBlocks.forEach(b => {
+          b.classList.add("closed");
+          const h = b.querySelector(".file-head");
+          if (h) h.setAttribute("aria-expanded", "false");
+          closedFiles.add(b.dataset.file);
+        });
+        localStorage.setItem(CLOSED_FILES_KEY, JSON.stringify([...closedFiles]));
+        return;
+      }
+
+      // 1. Cascade collapse all section cards first
+      const maxTotalCascade = 240; // ms
+      const stepDelay = Math.min(14, Math.max(4, Math.floor(maxTotalCascade / cards.length)));
+
+      cards.forEach((card, idx) => {
+        const delay = idx * stepDelay;
+        const tid = setTimeout(() => {
+          card.classList.remove("open");
+          if (card.dataset.secId) openSecIds.delete(card.dataset.secId);
+        }, delay);
+        staggerTimerIds.push(tid);
+      });
+
+      // 2. Once section cards complete their fold, smoothly fold the file blocks
+      const finishDelay = (cards.length * stepDelay) + 260;
+      const tid = setTimeout(() => {
+        fileBlocks.forEach(b => {
+          b.classList.add("closed");
+          const h = b.querySelector(".file-head");
+          if (h) h.setAttribute("aria-expanded", "false");
+          closedFiles.add(b.dataset.file);
+        });
+        localStorage.setItem(CLOSED_FILES_KEY, JSON.stringify([...closedFiles]));
+      }, finishDelay);
+      staggerTimerIds.push(tid);
+    }
   }
   const expandAllChk = document.getElementById("expandAllChk");
   if (expandAllChk) {

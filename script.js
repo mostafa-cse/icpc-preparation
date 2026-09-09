@@ -374,30 +374,46 @@
     }
   }
 
-  function openChecklistPage(phaseId) {
-    filters.phase = String(phaseId);
-    const pSel = document.getElementById("phaseSelect");
-    if (pSel) pSel.value = filters.phase;
-    activateTab("checklist");
-    updateChecklistViewState();
-    buildAccordions();
-    if (window.location.hash !== "#checklist/" + phaseId) {
-      try { history.replaceState(null, "", "#checklist/" + phaseId); } catch (e) {}
+  function openChecklistPage(phaseId, skipTransition = false) {
+    const applyState = () => {
+      filters.phase = String(phaseId);
+      const pSel = document.getElementById("phaseSelect");
+      if (pSel) pSel.value = filters.phase;
+      activateTab("checklist", true);
+      updateChecklistViewState();
+      buildAccordions();
+      if (window.location.hash !== "#checklist/" + phaseId) {
+        try { history.replaceState(null, "", "#checklist/" + phaseId); } catch (e) {}
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    if (!skipTransition && document.startViewTransition && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.startViewTransition(applyState);
+    } else {
+      applyState();
     }
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function showChecklistHub() {
-    filters.phase = "";
-    const pSel = document.getElementById("phaseSelect");
-    if (pSel) pSel.value = "";
-    activateTab("checklist");
-    updateChecklistViewState();
-    renderChecklistHub();
-    if (window.location.hash !== "#checklist") {
-      try { history.replaceState(null, "", "#checklist"); } catch (e) {}
+  function showChecklistHub(skipTransition = false) {
+    const applyState = () => {
+      filters.phase = "";
+      const pSel = document.getElementById("phaseSelect");
+      if (pSel) pSel.value = "";
+      activateTab("checklist", true);
+      updateChecklistViewState();
+      renderChecklistHub();
+      if (window.location.hash !== "#checklist") {
+        try { history.replaceState(null, "", "#checklist"); } catch (e) {}
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    if (!skipTransition && document.startViewTransition && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.startViewTransition(applyState);
+    } else {
+      applyState();
     }
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function renderDashboard() {
@@ -1098,13 +1114,21 @@
   }
 
   // ---------- Tabs ----------
-  function activateTab(name) {
-    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
-    document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === "panel-" + name));
-    // Panels that summarise data owned elsewhere are drawn once and then go
-    // stale — Profile reported 0 solved all day until the page was reloaded.
-    // Announcing the switch lets each panel refresh itself on the way in.
-    document.dispatchEvent(new CustomEvent("icpc:tab", { detail: name }));
+  function activateTab(name, skipTransition = false) {
+    const currentActive = document.querySelector(".tab.active");
+    if (currentActive && currentActive.dataset.tab === name) return;
+
+    const applyTabDOM = () => {
+      document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+      document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.id === "panel-" + name));
+      document.dispatchEvent(new CustomEvent("icpc:tab", { detail: name }));
+    };
+
+    if (!skipTransition && document.startViewTransition && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.startViewTransition(applyTabDOM);
+    } else {
+      applyTabDOM();
+    }
   }
   document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => activateTab(t.dataset.tab)));
 
@@ -1543,7 +1567,7 @@
   }
 
   // ---------- Routing & Hash Navigation ----------
-  function handleHashRoute() {
+  function handleHashRoute(isInitial = false) {
     const hash = (window.location.hash || "").replace(/^#/, "").trim();
     if (!hash) return;
     if (hash.startsWith("checklist")) {
@@ -1551,20 +1575,20 @@
       if (match) {
         const phaseId = parseInt(match[1], 10);
         if (phaseId >= 0 && phaseId <= 9) {
-          openChecklistPage(phaseId);
+          openChecklistPage(phaseId, isInitial);
           return;
         }
       }
-      showChecklistHub();
+      showChecklistHub(isInitial);
       return;
     }
     const validTabs = ["dashboard", "routine", "checklist", "templates", "contests", "profile", "settings"];
     if (validTabs.includes(hash)) {
-      activateTab(hash);
+      activateTab(hash, isInitial);
     }
   }
 
-  window.addEventListener("hashchange", handleHashRoute);
+  window.addEventListener("hashchange", () => handleHashRoute(false));
 
   // ---------- Init ----------
   document.getElementById("statTotalInline").textContent = allIds.size.toLocaleString();
@@ -1572,5 +1596,5 @@
   renderTodayStrip();
   measureTopbar();
   refreshAll();
-  handleHashRoute();
+  handleHashRoute(true);
 })();

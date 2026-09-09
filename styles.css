@@ -142,6 +142,11 @@
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none !important;
+    }
   }
 
   .eyebrow {
@@ -749,9 +754,21 @@
   }
   .block-jump:hover { border-color: var(--accent); color: var(--accent-ink); }
 
-  /* ---------- Checklist Hub & Directory ---------- */
+  /* ---------- Checklist Hub & Directory (Task 2.2 Fluid Motion) ---------- */
   .checklist-hub {
     display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 2.5rem;
+    animation: hub-enter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .checklist-detail {
+    animation: track-detail-enter 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes hub-enter {
+    from { opacity: 0; transform: translateY(8px) scale(0.995); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes track-detail-enter {
+    from { opacity: 0; transform: translateY(8px) scale(0.995); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   .hub-hero {
     display: flex; align-items: center; justify-content: space-between; gap: 2rem;
@@ -1883,9 +1900,33 @@
   .theme-btn:hover, .icon-btn:hover { border-color: var(--accent); background: var(--surface); }
   .theme-btn:active, .icon-btn:active { transform: translateY(1px); }
 
-  /* ---------- Panel entrance ---------- */
+  /* ---------- View Transitions & Panel Entrance (Tasks 2.1 & 2.2) ---------- */
+  ::view-transition-old(root) {
+    animation: 160ms cubic-bezier(0.4, 0, 1, 1) both vt-fade-out;
+  }
+  ::view-transition-new(root) {
+    animation: 220ms cubic-bezier(0, 0, 0.2, 1) 30ms both vt-fade-in;
+  }
+  @keyframes vt-fade-out {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-4px) scale(0.998); }
+  }
+  @keyframes vt-fade-in {
+    from { opacity: 0; transform: translateY(4px) scale(0.998); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
   .panel.active { animation: nb-fade var(--t-med) var(--ease); }
   @keyframes nb-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Smooth Scroll Anchoring & Safe Header Offsets (Task 2.3) ---------- */
+  .chip, .sec-card, .file-block {
+    scroll-margin-top: calc(var(--topbar-h, 4.2rem) + 4.8rem);
+    scroll-margin-bottom: 2rem;
+  }
+  .checklist-breadcrumb-bar, .filter-bar {
+    scroll-margin-top: var(--topbar-h, 4.2rem);
+  }
 
   /* ---------- Responsive Nav & Tools ---------- */
   @media (max-width: 1200px) {

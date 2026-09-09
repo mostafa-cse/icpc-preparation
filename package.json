@@ -1,0 +1,23 @@
+{
+  "name": "icpc-preparation",
+  "version": "1.0.0",
+  "description": "ICPC Final Sprint — 26-Week Training Program & Practice Tracker",
+  "main": "frontend/index.html",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js",
+    "stamp": "node backend/stamp.js",
+    "stamp:check": "node backend/stamp.js --check"
+  },
+  "keywords": [
+    "icpc",
+    "competitive-programming",
+    "algorithms",
+    "data-structures",
+    "codeforces",
+    "cses",
+    "training"
+  ],
+  "author": "Mostafa Kamal",
+  "license": "MIT"
+}

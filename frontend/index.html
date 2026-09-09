@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ICPC Final Sprint — 16-Week Training Program</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230f172a'/%3E%3Cpath d='M8 11l5 5-5 5M15 21h9' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script>
+// Prevent Navigator LockManager exclusive lock errors across tabs and background states
+(function() {
+  if (typeof navigator !== "undefined" && navigator.locks && typeof navigator.locks.request === "function") {
+    var _origReq = navigator.locks.request.bind(navigator.locks);
+    navigator.locks.request = function(name, opts, cb) {
+      if (typeof opts === "function") { cb = opts; opts = {}; }
+      return _origReq(name, opts, async function(lock) {
+        if (!lock && opts && opts.ifAvailable) {
+          return await cb({ name: name, mode: opts.mode || "exclusive" });
+        }
+        return await cb(lock);
+      }).catch(async function(err) {
+        if (err && /LockManager lock .* immediately failed/i.test(err.message || String(err))) {
+          if (typeof cb === "function") return await cb({ name: name, mode: "exclusive" });
+        }
+        throw err;
+      });
+    };
+  }
+  window.addEventListener("unhandledrejection", function(e) {
+    if (e && e.reason && /LockManager lock .* immediately failed/i.test(e.reason.message || String(e.reason))) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+})();
+</script>
+<link rel="stylesheet" href="styles.css?v=ea45119a">
+<script src="theme.js?v=ddf538cb"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js" crossorigin="anonymous"></script>
+<script src="supabase-config.js?v=57dadd8f"></script>
+</head>
+<body>
+
+<header class="topbar cp-topbar">
+  <div class="cp-topbar-left">
+    <a href="#" class="brand cp-brand" id="cpBrandLink" title="ICPC Preparation Training Program">
+      <span class="brand-mark">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+      </span>
+      <div class="cp-brand-text">
+        <div class="cp-brand-title-row">
+          <span class="cp-brand-name">ICPC <span class="cp-brand-accent">PREP</span></span>
+          <span class="cp-plan-pill" data-plan-weeks title="Plan Pace (Settings)">16w</span>
+        </div>
+        <span class="cp-brand-sub">Final-Sprint Training</span>
+      </div>
+    </a>
+
+    <div class="cp-nav-divider" aria-hidden="true"></div>
+
+    <nav class="tabs cp-tabs" role="tablist">
+      <button class="tab active" data-tab="dashboard" type="button">Dashboard</button>
+      <button class="tab" data-tab="routine" type="button">Routine</button>
+      <button class="tab" data-tab="checklist" type="button">Checklist</button>
+      <button class="tab" data-tab="templates" type="button">Templates</button>
+      <button class="tab" data-tab="contests" type="button">Contests</button>
+      <button class="tab" data-tab="profile" type="button">Profile</button>
+      <button class="tab" data-tab="settings" type="button">Settings</button>
+      <button class="tab" data-tab="admin" type="button" hidden>Admin</button>
+    </nav>
+  </div>
+
+  <!-- CP Grind HUD & Tools -->
+  <div class="cp-hud-tools">
+    <!-- Practice Timer HUD -->
+    <div class="cp-timer-pill" id="cpTopTimer" title="Problem Practice Timer (45m hint, 60m hard cap)">
+      <span class="cp-timer-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      </span>
+      <span class="cp-timer-face mono" id="cpTimerFace">00:00</span>
+      <button type="button" class="cp-timer-btn" id="cpTimerToggle" title="Start/Pause Timer (t)" aria-label="Toggle Practice Timer">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      </button>
+      <button type="button" class="cp-timer-btn" id="cpTimerReset" title="Reset Timer (T)" aria-label="Reset Practice Timer">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+      </button>
+    </div>
+
+    <!-- Active Phase Status & Popover Trigger -->
+    <div class="cp-phase-wrap">
+      <button type="button" class="cp-tool-btn cp-phase-btn" id="cpPhaseBtn" title="Current Training Block status & schedule popover">
+        <span class="cp-phase-dot"></span>
+        <span id="cpPhaseLabel">Block 1 · 19d left</span>
+        <span class="cp-chevron">▾</span>
+      </button>
+      <div class="cp-phase-dropdown" id="cpPhaseDropdown" style="display:none"></div>
+    </div>
+
+    <!-- Solved Counter Pill -->
+    <div class="cp-solved-pill" id="cpSolvedPill" title="Problems solved in curriculum">
+      <span class="cp-check-icon">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </span>
+      <span class="mono" id="cpSolvedNum">0</span>
+      <span class="cp-solved-total mono">/ 5,089</span>
+    </div>
+
+    <!-- Zen / Focus Mode Toggle -->
+    <button type="button" class="cp-tool-btn cp-zen-btn" id="cpZenBtn" title="Toggle Fullscreen Focus / Zen mode (z) - Hides topbar">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>
+      <span class="cp-tool-label">Focus</span>
+    </button>
+
+    <div class="account-bar" id="accountBar"></div>
+  </div>
+</header>
+
+<!-- Floating Restore Button when Topbar is in Zen Mode -->
+<button type="button" class="zen-restore-btn" id="zenRestoreBtn" title="Exit Focus Mode (z or Esc)" aria-label="Exit Focus Mode">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>
+  <span>Exit Focus <kbd>z</kbd></span>
+</button>
+
+<div class="app">
+  <main>
+    <!-- ======================= DASHBOARD PANEL ======================= -->
+    <section id="panel-dashboard" class="panel active">
+      <div id="dashboardBody"></div>
+    </section>
+
+    <!-- ======================= ROUTINE PANEL ======================= -->
+    <section id="panel-routine" class="panel">
+      <div class="doc-col">
+        <p class="lede">Six source files, <strong id="statTotalInline">5,089</strong> unique problems, one goal: walk into your ICPC contest having drilled every core pattern in this set at least once. This is a full-time program — 12–14 hours a day over <span data-plan-weeks>16</span> weeks (<span data-plan-months>4</span> months), structured so the hardest, highest-yield topics get the most runway.</p>
+
+        <div class="stat-row">
+          <div class="stat"><span class="num" data-plan-weeks>16</span><span class="label">Weeks</span></div>
+          <div class="stat"><span class="num">10</span><span class="label">Training blocks</span></div>
+          <div class="stat"><span class="num">6</span><span class="label">Source files</span></div>
+          <div class="stat"><span class="num">5,089</span><span class="label">Unique problems</span></div>
+          <div class="stat"><span class="num">4</span><span class="label">Contest platforms</span></div>
+        </div>
+
+        <div class="callout">
+          <strong>On "solve all of them":</strong> at 12–14 hrs/day this program gives you roughly 950–1,050 hours of pure curriculum time once contests, upsolving, and review are subtracted. Clearing every single one of the 5,089 problems in <span data-plan-weeks>16</span> weeks is the stretch goal, not a promise — nobody's done it on this pace and kept their sanity. Work each block's checklist top to bottom, favor <span class="mono">Easy/Normal</span>-tagged and non-flagged items first, and treat anything marked <strong>stretch</strong> (deep-cut structures, or <span class="mono">Very Hard</span>/<span class="mono">Insane</span>) as background filler you chip away at for the rest of the program — including after the final week, since the tracker keeps counting.
+        </div>
+      </div>
+
+      <section class="doc-section">
+        <div id="routineBody"></div>
+      </section>
+
+      <section class="doc-section">
+        <h2>Weekly Contest Calendar</h2>
+        <p>Codeforces has no fixed day — it averages 2–3 rounds/week but the schedule genuinely varies, so check <span class="mono">codeforces.com/contests</span> every Monday and slot whatever lands into that day's grind slot. CodeChef, AtCoder and LeetCode run on fixed weekly schedules — set those into your calendar once.</p>
+        <div class="cal-wrap">
+          <table class="cal">
+            <thead><tr><th>Day</th><th>What's on</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td class="day">Monday</td><td class="what">— grind day —</td><td class="notes">Pure curriculum. No fixed contest.</td></tr>
+              <tr><td class="day">Tuesday</td><td class="what"><span class="plat-badge">CF</span>check calendar</td><td class="notes">Codeforces has no fixed day — check and slot in if one lands.</td></tr>
+              <tr><td class="day">Wednesday</td><td class="what"><span class="plat-badge">CC</span>CodeChef Starters</td><td class="notes">Weekly, fixed day, ~20:00 IST, ~3 hours.</td></tr>
+              <tr><td class="day">Thursday</td><td class="what"><span class="plat-badge">CF</span>check calendar</td><td class="notes">Same as Tuesday.</td></tr>
+              <tr><td class="day">Friday</td><td class="what"><span class="plat-badge">CF</span>check calendar</td><td class="notes">Educational/Div rounds land here often historically, but not guaranteed.</td></tr>
+              <tr><td class="day">Saturday</td><td class="what"><span class="plat-badge">AC</span>AtCoder Beginner Contest<br><span class="plat-badge">LC</span>Biweekly (alternate weeks)</td><td class="notes">ABC: weekly, fixed, 21:00 JST. LeetCode Biweekly: every other Saturday, 14:30 UTC.</td></tr>
+              <tr><td class="day">Sunday</td><td class="what"><span class="plat-badge">LC</span>LeetCode Weekly<br><span class="plat-badge">MOCK</span>ICPC mock (from wk.5, biweekly)</td><td class="notes">LC Weekly: 02:30 UTC — convert to local, this can land Saturday night depending on timezone. Full 5h ICPC-style mock via Codeforces Gym / vjudge every other Sunday from the DP block onward, then most days in the final block.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:0.85rem">Convert the fixed platforms' times to your own timezone once and put them straight into your calendar app. Only Codeforces needs a weekly re-check.</p>
+      </section>
+
+      <section class="doc-section">
+        <h2>The 10 Training Blocks</h2>
+        <p>Each block names its primary sources from the six files. Progress bars below pull live from your checklist. Jump straight to a block's problems with the button on the right.</p>
+        <div class="block-list" id="blockList"></div>
+      </section>
+
+      <section class="doc-section">
+        <h2>Ground Rules</h2>
+        <ul>
+          <li><strong>Time-box in training, not in contests.</strong> Cap yourself at 45–60 min on a problem before taking a hint during grind blocks. During live contests, sit through the whole thing — no early peeking, that's the muscle you're building.</li>
+          <li><strong>Upsolve same day, every time.</strong> A problem you finish two days later barely counts — the value is in closing the loop while the contest is still fresh.</li>
+          <li><strong>Keep an error log.</strong> The 2–3 line note at the end of each grind day matters more than it feels like it does. Recurring mistakes are worth more than new problems solved.</li>
+          <li><strong>One rest half-day every two weeks, non-negotiable.</strong> This is a marathon, not a sprint — burnout in month three costs more than the half-day ever will.</li>
+          <li><strong>Have teammates?</strong> This plan is written for solo pacing. Sync the mock-contest blocks (the DP block onward, and the final block) with your team explicitly — one shared machine, rotate who's typing, practice the handoff, not just the algorithms.</li>
+        </ul>
+      </section>
+    </section>
+
+    <!-- ======================= CHECKLIST PANEL ======================= -->
+    <section id="panel-checklist" class="panel">
+      <!-- Hub View: 10 Training Tracks Directory -->
+      <div id="checklistHub" class="checklist-hub">
+        <div class="hub-hero">
+          <div class="hub-hero-main">
+            <span class="hub-kicker">CURRICULUM DIRECTORY</span>
+            <h2 class="hub-title">ICPC Training Tracks & Checklists</h2>
+            <p class="hub-desc">10 topic-focused training checklists spanning 5,089 curated ICPC problems. Select a checklist track to open its dedicated problem solving workspace.</p>
+          </div>
+          <div class="hub-summary-card">
+            <div class="hub-summary-kpis">
+              <div>
+                <span class="hub-kpi-val" id="hubSolvedCount">0 / 5,089</span>
+                <span class="hub-kpi-lbl">Total Solved</span>
+              </div>
+              <div>
+                <span class="hub-kpi-val" id="hubPercentSolved">0.0%</span>
+                <span class="hub-kpi-lbl">Completion</span>
+              </div>
+            </div>
+            <div class="hub-summary-bar"><i id="hubOverallBar" style="width:0%"></i></div>
+          </div>
+        </div>
+
+        <div class="checklist-grid" id="checklistTrackGrid">
+          <!-- Dynamically populated with 10 training track cards -->
+        </div>
+      </div>
+
+      <!-- Dedicated Separated Checklist Page -->
+      <div id="checklistDetail" class="checklist-detail" style="display:none">
+        <div class="checklist-breadcrumb-bar" id="checklistBreadcrumb">
+          <div class="breadcrumb-left">
+            <button type="button" class="btn-back-hub" id="checklistBackBtn" title="Back to All Checklists">
+              <span class="back-arrow">←</span> All Checklists
+            </button>
+            <div class="breadcrumb-separator">/</div>
+            <div class="active-track-info">
+              <span class="track-badge" id="activeTrackBadge">Track 1</span>
+              <h2 class="active-track-title" id="activeTrackTitle">Foundations & Toolkit</h2>
+              <span class="active-track-weeks" id="activeTrackWeeks">Weeks 1–3</span>
+            </div>
+          </div>
+
+          <!-- Redesigned Horizontal Counter (Phase Progress removed) -->
+          <div class="phase-metrics-horizontal" id="phaseMetricsHorizontal">
+            <div class="phase-stat-chip total" title="Total problems in this phase">
+              <span class="ps-label">Total</span>
+              <span class="ps-val" id="phaseTotalCount">0</span>
+            </div>
+            <div class="phase-stat-divider" aria-hidden="true"></div>
+            <div class="phase-stat-chip solved" title="Solved problems in this phase">
+              <span class="ps-dot ps-good"></span>
+              <span class="ps-label">Solved</span>
+              <span class="ps-val" id="phaseSolvedCount">0</span>
+            </div>
+            <div class="phase-stat-divider" aria-hidden="true"></div>
+            <div class="phase-stat-chip remain" title="Remaining unsolved problems in this phase">
+              <span class="ps-dot ps-warn"></span>
+              <span class="ps-label">Remaining</span>
+              <span class="ps-val" id="phaseRemainCount">0</span>
+            </div>
+            <div class="phase-stat-divider" aria-hidden="true"></div>
+            <div class="phase-stat-chip starred" id="phaseStarredChip" title="Click to filter Starred / Important problems in this track" role="button" tabindex="0">
+              <span class="ps-star">★</span>
+              <span class="ps-label">Starred</span>
+              <span class="ps-val" id="phaseStarredCount">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-bar single-line-filter-bar">
+          <input type="search" id="searchBox" placeholder="Search problem id, e.g. CSES-1082…" autocomplete="off">
+          <select id="fileSelect"><option value="">All files</option></select>
+          <select id="phaseSelect"><option value="">All blocks</option></select>
+          <label class="chk-label star-filter-chk" title="Show only starred important problems">
+            <input type="checkbox" id="flaggedOnly">
+            <span class="star-filter-icon">★</span> Starred only
+            <span id="flagCount" class="star-filter-count"></span>
+          </label>
+          <label class="chk-label"><input type="checkbox" id="hideSolved"> Hide solved</label>
+          <label class="chk-label"><input type="checkbox" id="expandAllChk"> Expand</label>
+        </div>
+
+        <div id="fileAccordions"></div>
+        <p class="empty-note" id="emptyNote" style="display:none">No problems match the current filters.</p>
+      </div>
+    </section>
+
+    <!-- ======================= TEMPLATES PANEL ======================= -->
+    <section id="panel-templates" class="panel">
+      <div class="doc-col">
+        <p class="lede">Your onsite-contest notebook. Store a template every time you solve something worth keeping — description, complexity, and the C++ code. Export the whole library as LaTeX and compile it into a printed team notebook in the same layout as <span class="mono">notebook.pdf</span>.</p>
+        <div class="callout">
+          <strong>Printing it for real:</strong> pick <span class="mono">LaTeX (.tex)</span> below and compile with <span class="mono">pdflatex notebook.tex</span> — run it twice so the table of contents fills in. Overleaf works too: upload the <span class="mono">.tex</span> and hit Recompile. Each entry gets the notebook's <span class="mono">[N lines] - hash</span> signature, where the hash is the MD5 of the comment- and whitespace-stripped code, so at an onsite contest you can retype a template and verify you typed it correctly.
+        </div>
+      </div>
+
+      <div class="tpl-meta-bar">
+        <label>Notebook title <input type="text" id="tplMetaTitle" placeholder="ICPC Team Notebook"></label>
+        <label>Authors / team <input type="text" id="tplMetaAuthors" placeholder="Your name, teammate, teammate"></label>
+      </div>
+
+      <div class="filter-bar">
+        <input type="search" id="tplSearch" placeholder="Search title, description or code…" autocomplete="off">
+        <select id="tplCatFilter"><option value="">All sections</option></select>
+        <div class="btn-row">
+          <button class="btn primary" id="tplNewBtn" type="button">+ New template</button>
+          <select id="tplExportFmt" title="Export format">
+            <option value="tex">LaTeX (.tex)</option>
+            <option value="print">Print / Save as PDF</option>
+            <option value="md">Markdown (.md)</option>
+            <option value="cpp">Single C++ file (.cpp)</option>
+            <option value="json">JSON backup (.json)</option>
+          </select>
+          <select id="tplPrintSize" title="Base font size for Print / Save as PDF">
+            <option value="8">8 pt</option>
+            <option value="9">9 pt</option>
+            <option value="10" selected>10 pt</option>
+            <option value="11">11 pt</option>
+          </select>
+          <label class="chk-label" title="notebook.pdf shows code only — tick to also print your notes"><input type="checkbox" id="tplExportNotes"> Notes in export</label>
+          <button class="btn" id="tplExportBtn" type="button">Export</button>
+          <button class="btn" id="tplImportBtn" type="button">Import</button>
+          <input type="file" id="tplImportFile" accept="application/json" style="display:none">
+        </div>
+      </div>
+
+      <div class="tpl-editor" id="tplEditor" hidden>
+        <h3 id="tplEditorHead">New template</h3>
+        <div class="tpl-form">
+          <label class="f-title">Title <input type="text" id="tplTitle" placeholder="e.g. Segment Tree (lazy)"></label>
+          <label class="f-cat">Section <select id="tplCat"></select></label>
+          <label class="f-time">Time complexity <input type="text" id="tplTime" placeholder="O(log n) per query"></label>
+          <label class="f-space">Space complexity <input type="text" id="tplSpace" placeholder="O(n)"></label>
+          <label class="f-desc">Description <textarea id="tplDesc" rows="3" placeholder="What it does, when to reach for it, gotchas, how to adapt it."></textarea></label>
+          <label class="f-code">C++ code <textarea id="tplCode" rows="16" spellcheck="false" placeholder="struct SegmentTree { … };"></textarea></label>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="tplSaveBtn" type="button">Save template</button>
+          <button class="btn" id="tplCancelBtn" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <div class="stat-row" id="tplStats"></div>
+      <div id="tplList"></div>
+      <p class="empty-note" id="tplEmpty" style="display:none">No templates yet — hit <strong>+ New template</strong> to start your notebook.</p>
+    </section>
+
+    <!-- ======================= CONTESTS PANEL ======================= -->
+    <section id="panel-contests" class="panel">
+      <div class="doc-col">
+        <p class="lede">The next contest across the four platforms in your calendar, pulled live — just the one you need to think about today. Set a reminder to get a browser notification before it starts, or download the <span class="mono">.ics</span> to put it in your real calendar. Once it begins, the next one takes its place. Untick a platform to skip past its rounds.</p>
+        <div class="callout">
+          <strong>Which reminder to use:</strong> browser notifications only fire while this page is open, so they're for contests later the same day. For anything further out, use <strong>Calendar</strong> — the downloaded <span class="mono">.ics</span> carries its own alarm and fires whether or not this page is running.
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="plat-toggles">
+          <label class="plat-toggle"><input type="checkbox" value="cf" checked> <span class="plat-badge plat-cf">CF</span>Codeforces</label>
+          <label class="plat-toggle"><input type="checkbox" value="cc" checked> <span class="plat-badge plat-cc">CC</span>CodeChef</label>
+          <label class="plat-toggle"><input type="checkbox" value="ac" checked> <span class="plat-badge plat-ac">AC</span>AtCoder</label>
+          <label class="plat-toggle"><input type="checkbox" value="lc" checked> <span class="plat-badge plat-lc">LC</span>LeetCode</label>
+        </div>
+        <div class="btn-row">
+          <label class="chk-label">Remind me
+            <select id="contestLead">
+              <option value="10">10 min before</option>
+              <option value="30">30 min before</option>
+              <option value="60">1 hour before</option>
+              <option value="180">3 hours before</option>
+              <option value="1440">1 day before</option>
+            </select>
+          </label>
+          <button class="btn" id="contestNotifyBtn" type="button">Enable notifications</button>
+          <button class="btn" id="contestRefreshBtn" type="button">Refresh</button>
+        </div>
+      </div>
+
+      <details class="clist-box" id="clistBox">
+        <summary>Contest data source — clist.by (connected)</summary>
+        <p>AtCoder, LeetCode and CodeChef all refuse requests coming from a web page, so no site can read them directly from your browser. <a href="https://clist.by/api/v4/doc/" target="_blank" rel="noopener noreferrer">clist.by</a> mirrors every platform and does allow browser access, so one authenticated call covers all four. Your key is already set — Codeforces, CodeChef, AtCoder and LeetCode all come through live. Clear the field to fall back to Codeforces-direct plus fixed weekly slots.</p>
+        <label>clist.by credentials
+          <input type="text" id="clistKey" placeholder="username:api_key" autocomplete="off" spellcheck="false">
+        </label>
+        <p class="clist-note">Stored in this browser and sent only to clist.by. It is also written into <span class="mono">contests.js</span> as the default — if you publish this folder anywhere public, remove that line first and paste the key here instead.</p>
+      </details>
+
+      <p class="contest-status" id="contestStatus">Open this tab to load contests.</p>
+      <div id="contestList"></div>
+    </section>
+
+    <!-- ======================= PROFILE PANEL ======================= -->
+    <section id="panel-profile" class="panel">
+      <div id="profileBody"></div>
+    </section>
+
+    <!-- ======================= SETTINGS PANEL ======================= -->
+    <section id="panel-settings" class="panel">
+      <div id="settingsBody"></div>
+    </section>
+
+    <section id="panel-admin" class="panel">
+      <div id="adminBody"></div>
+    </section>
+  </main>
+
+  <div id="keyHelp" class="key-help" hidden>
+    <h3>Keyboard</h3>
+    <dl>
+      <dt><kbd>/</kbd> or <kbd>s</kbd></dt><dd>Search problems</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Clear the search</dd>
+      <dt><kbd>1</kbd>–<kbd>7</kbd></dt><dd>Dashboard · Routine · Checklist · Templates · Contests · Profile · Settings</dd>
+      <dt><kbd>e</kbd> / <kbd>E</kbd></dt><dd>Expand / collapse all sections</dd>
+      <dt><kbd>f</kbd></dt><dd>Toggle starred / important only</dd>
+      <dt><kbd>n</kbd></dt><dd>Jump to a random unsolved problem in view</dd>
+      <dt><kbd>t</kbd> / <kbd>T</kbd></dt><dd>Start-pause / reset the time-box timer</dd>
+      <dt><kbd>z</kbd></dt><dd>Toggle Focus / Zen mode (hide or show topbar)</dd>
+      <dt><kbd>?</kbd></dt><dd>Show or hide this</dd>
+    </dl>
+    <p>Click the star on any problem or right-click to mark it as important.</p>
+  </div>
+
+  <footer class="app-footer">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <div class="foot-mark-row">
+          <span class="brand-mark">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          </span>
+          <div>
+            <p class="foot-name">ICPC · <span data-plan-weeks>16</span>-Week Plan</p>
+            <p class="foot-tag">Final-sprint training program</p>
+          </div>
+        </div>
+        <p class="foot-blurb">Ten training blocks, 5,089 problems and a printable team notebook — one plan from first week to contest floor.</p>
+        <div class="foot-metrics">
+          <span><b data-plan-weeks>16</b> weeks</span>
+          <span><b>10</b> blocks</span>
+          <span><b>5,089</b> problems</span>
+        </div>
+      </div>
+
+      <nav class="foot-col" aria-label="Sections">
+        <h3>Program</h3>
+        <a href="#" data-goto-tab="dashboard">Dashboard</a>
+        <a href="#" data-goto-tab="routine">Routine</a>
+        <a href="#" data-goto-tab="checklist">Checklist</a>
+        <a href="#" data-goto-tab="templates">Templates</a>
+        <a href="#" data-goto-tab="contests">Contests</a>
+        <a href="#" data-goto-tab="profile">Profile</a>
+        <a href="#" data-goto-tab="settings">Settings</a>
+      </nav>
+
+      <nav class="foot-col" aria-label="Contest platforms">
+        <h3>Platforms</h3>
+        <a href="https://codeforces.com/contests" target="_blank" rel="noopener noreferrer">Codeforces</a>
+        <a href="https://www.codechef.com/contests" target="_blank" rel="noopener noreferrer">CodeChef</a>
+        <a href="https://atcoder.jp/contests/" target="_blank" rel="noopener noreferrer">AtCoder</a>
+        <a href="https://leetcode.com/contest/" target="_blank" rel="noopener noreferrer">LeetCode</a>
+        <a href="https://vjudge.net" target="_blank" rel="noopener noreferrer">vJudge mirror</a>
+      </nav>
+
+      <nav class="foot-col" aria-label="Problem sources">
+        <h3>Sources</h3>
+        <a href="https://cses.fi/problemset/" target="_blank" rel="noopener noreferrer">CSES Problem Set</a>
+        <a href="https://usaco.guide/" target="_blank" rel="noopener noreferrer">USACO Guide</a>
+        <a href="https://www.luogu.com.cn/" target="_blank" rel="noopener noreferrer">Luogu</a>
+        <a href="https://lightoj.com/" target="_blank" rel="noopener noreferrer">LightOJ</a>
+        <a href="https://github.com/mostafa-cse/icpc-preparation" target="_blank" rel="noopener noreferrer">Source on GitHub</a>
+      </nav>
+    </div>
+
+    <div class="foot-bar">
+      <p>© <span id="footYear">2026</span> Mostafa Kamal · Built for the ICPC final sprint</p>
+      <p class="foot-note">504 sections across 5 source files · Progress and templates sync to your account</p>
+    </div>
+  </footer>
+</div>
+
+<div id="printRoot" aria-hidden="true"></div>
+
+<script src="script.js?v=aa859cf0"></script>
+<script src="prayer.js?v=06919d6a"></script>
+<script src="routine.js?v=3519941c"></script>
+<script src="timer.js?v=6bfcb00f"></script>
+<script src="templates.js?v=c2f46bc6"></script>
+<script src="contests.js?v=c5893920"></script>
+<script src="account.js?v=19741cca"></script>
+<script src="settings.js?v=17c34992"></script>
+<script src="dashboard.js?v=f5182f43"></script>
+<script src="admin.js?v=fb31bafd"></script>
+</body>
+</html>

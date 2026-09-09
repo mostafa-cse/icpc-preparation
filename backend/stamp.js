@@ -18,7 +18,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
-const ROOT = __dirname;
+const ROOT = path.join(__dirname, "..", "frontend");
 const PAGE = path.join(ROOT, "index.html");
 const check = process.argv.indexOf("--check") !== -1;
 

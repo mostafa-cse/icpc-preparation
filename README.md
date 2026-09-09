@@ -34,51 +34,91 @@ amber at 45 minutes and red at 60, and otherwise stays out of the way. It
 stores a start timestamp rather than a running count, so reloading or closing
 the tab mid-problem neither loses nor inflates the time.
 
-## Deploying
+## Project Architecture
 
-Assets are referenced with a `?v=<content-hash>` stamp so a new deploy reaches
-browsers immediately. GitHub Pages serves with `cache-control: max-age=600`, and
-the dangerous case is not a fully stale page but a mixed one — new `script.js`
-against old `styles.css` — where a feature ships half-applied and looks broken.
+The project is organized into a modular 4-tier structure:
 
-Re-stamp before committing whenever a `.js` or `.css` file changed:
-
-```bash
-node stamp.js           # rewrite index.html with fresh hashes
-node stamp.js --check   # exit 1 if any stamp is stale
+```
+ICPC Preparation/
+├── frontend/                     # Client-side Single Page Application (SPA)
+│   ├── index.html                # Application layout & UI components
+│   ├── styles.css                # Curated dark/light theme design system
+│   ├── script.js                 # Core problem data & checklist controller
+│   ├── account.js                # Authentication modal & cloud sync
+│   ├── admin.js                  # Admin panel & member moderation
+│   ├── contests.js               # Contest schedule & clist.by integration
+│   ├── dashboard.js              # Analytics, heatmaps, and target milestones
+│   ├── prayer.js                 # Daily Islamic prayer timings widget
+│   ├── routine.js                # 26-week ICPC training routine & planner
+│   ├── settings.js               # Plan duration, target preferences & backups
+│   ├── supabase-config.js        # Supabase client credentials & setup
+│   ├── templates.js              # Competitive programming code templates
+│   ├── theme.js                  # Dynamic theme manager (Dark, Dim, Light, etc.)
+│   └── timer.js                  # Problem timebox stopwatch & Pomodoro timer
+│
+├── backend/                      # Development servers & automation tools
+│   ├── server.js                 # Zero-dependency Node.js HTTP server
+│   ├── server.py                 # Python 3 development server fallback
+│   ├── stamp.js                  # Asset hash cache-buster tool
+│   └── README.md                 # Backend tooling documentation
+│
+├── database/                     # PostgreSQL / Supabase schema & migrations
+│   ├── supabase-schema.sql       # Idempotent database schema & RLS policies
+│   └── README.md                 # Table specifications & security guidelines
+│
+├── content/                      # Authoritative CP curriculum markdown files
+│   ├── CSES.md                   # CSES 300+ problem collection
+│   ├── Cp-books.md               # Classic CP literature exercises
+│   ├── LightOJ.md                # LightOJ categorized problem sets
+│   ├── Lougu-Training.md         # Luogu structured training roadmap
+│   ├── USACO-Guide.md            # USACO Guide curriculum (Bronze-Platinum)
+│   ├── acm.md                    # Historic ACM-ICPC regional sets
+│   ├── cp-algo.md                # CP-Algorithms 89 topic lists
+│   └── README.md                 # Content guide & sources
+│
+├── index.html                    # Root gateway redirecting to frontend/
+├── package.json                  # Developer workflow scripts (`npm start`, `npm run stamp`)
+├── .gitignore                    # Standard git exclusions
+└── .nojekyll                     # GitHub Pages Jekyll bypass
 ```
 
-Features should not depend on the stylesheet alone for correctness either: the
-collapsible sources set `hidden` on the wrapper from JavaScript, so they work
-even against a stylesheet that predates them.
+## Running Locally
 
-## Running it
-
-It's static — open `index.html`, or serve the folder:
+You can launch the development server using Node.js or Python:
 
 ```bash
-python3 -m http.server 8000
+# Using npm:
+npm start
+
+# Or using Node directly:
+node backend/server.js
+
+# Or using Python:
+python3 backend/server.py
 ```
 
-Serving over `http://` is preferred: opening via `file://` makes browsers block
-the contest API requests as cross-origin.
+Open `http://localhost:8085` in your browser. Serving over `http://` is required for contest API feeds and local storage synchronization.
 
-## Accounts and data (Supabase)
+## Deploying & Cache Management
 
-Sign-in is required. Each account's solved problems live in Supabase, so
-progress follows you across devices. **Profile** shows totals, per-block and
-per-source-file breakdowns, and sign-out.
+Assets are referenced with a `?v=<content-hash>` stamp so updates take effect immediately in user browsers. GitHub Pages serves static files with `cache-control: max-age=600`, so content hashing avoids mixed/stale assets.
 
-Set it up once:
+Re-stamp assets before committing whenever editing frontend scripts or stylesheets:
+
+```bash
+npm run stamp           # rewrite frontend/index.html with fresh hashes
+npm run stamp:check     # exit 1 if any stamp is stale
+```
+
+## Accounts and Data (Supabase)
+
+Progress is synced across devices using a Supabase PostgreSQL backend. **Profile** shows totals, per-block and per-source-file breakdowns, and user settings.
+
+Set it up:
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. **SQL Editor -> New query** -> paste `supabase-schema.sql` -> **Run**. That
-   creates every table, switches on Row Level Security so each user can only
-   touch their own rows, and adds a trigger that creates a profile row on
-   signup. The file is idempotent — re-run it after pulling to pick up new
-   columns.
-3. **Project Settings -> API** -> copy the **Project URL** and the **anon
-   public** key into `supabase-config.js`.
+2. **SQL Editor -> New query** -> paste the contents of [`database/supabase-schema.sql`](database/supabase-schema.sql) -> **Run**. This creates all tables, enforces Row-Level Security (RLS), and sets up user profile creation triggers.
+3. **Project Settings -> API** -> copy the **Project URL** and the **anon public** key into `frontend/supabase-config.js`.
 
 The anon key is meant to ship in the browser — RLS is what protects the data.
 Never put the `service_role` key there; it bypasses RLS.

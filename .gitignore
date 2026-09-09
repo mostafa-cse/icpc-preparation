@@ -7,4 +7,7 @@ CSES.md
 Cp-books.md
 AtCoder-Beginner-Contest.md
 cp-algo.md
-supabase-config.js
+# Node & Python
+node_modules/
+__pycache__/
+*.pyc

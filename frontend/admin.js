@@ -279,7 +279,7 @@
       const h = host();
       if (h) h.innerHTML = '<p class="empty-note">Could not load the account list: ' +
         esc((err && err.message) || String(err)) +
-        "<br>Re-run supabase-schema.sql if you have not since the admin panel was added.</p>";
+        "<br>Re-run database/supabase-schema.sql if you have not since the admin panel was added.</p>";
     }
   }
 

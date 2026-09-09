@@ -615,7 +615,7 @@
       const unknown = /Could not find the '(\w+)' column/.exec(m);
       if (unknown && !missingCols.has(unknown[1])) {
         missingCols.add(unknown[1]);
-        setSyncState("saved", "Saved in this browser. Re-run supabase-schema.sql to sync '" +
+        setSyncState("saved", "Saved in this browser. Re-run database/supabase-schema.sql to sync '" +
           unknown[1] + "' across devices.");
         const rest = Object.assign({}, send); delete rest[unknown[1]];
         if (Object.keys(rest).length) return pushSettings(rest);

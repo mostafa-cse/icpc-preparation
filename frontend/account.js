@@ -961,10 +961,6 @@
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        // Override Navigator LockManager to avoid "Acquiring an exclusive Navigator LockManager lock immediately failed"
-        lock: async (_name, _acquireTimeout, fn) => {
-          return await fn();
-        },
       },
     });
 

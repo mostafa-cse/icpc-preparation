@@ -3316,18 +3316,18 @@
   /* Combined Pixel Art & Fireplace Stage */
   .cp-coder-stage {
     position: relative;
-    width: 540px;
+    width: 500px;
     max-width: 100%;
-    height: 310px;
-    background: #141720;
-    border: 1px solid rgba(255, 140, 0, 0.35);
-    border-radius: 20px;
+    height: 270px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    overflow: hidden;
-    box-shadow: 0 0 60px rgba(0,0,0,0.85), 0 0 30px rgba(255, 100, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    margin: 0 auto 1.1rem;
+    overflow: visible;
+    box-shadow: none;
+    margin: 0 auto 1.25rem;
   }
 
   @media (max-width: 580px) {
@@ -3341,8 +3341,8 @@
 
   .cp-coder-stage .cp-coder {
     position: absolute;
-    bottom: 18px;
-    left: 20px;
+    bottom: 5px;
+    left: 0;
     width: 500px;
     height: 260px;
     z-index: 1;
@@ -3350,9 +3350,9 @@
 
   .cp-coder-stage .fireplace {
     position: absolute;
-    bottom: 54px;
-    left: 145px;
-    transform: scale(0.56);
+    bottom: 74px;
+    left: 132px;
+    transform: scale(0.64);
     transform-origin: bottom center;
     z-index: 2;
     pointer-events: none;

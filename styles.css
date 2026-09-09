@@ -139,6 +139,33 @@
   :focus-visible {
     outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px;
   }
+
+  /* Touch action manipulation to eliminate 300ms tap delay on mobile & tablets (Task 4.3) */
+  html, body {
+    touch-action: manipulation;
+  }
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  label,
+  [role="button"],
+  .chip,
+  .sec-head,
+  .file-head,
+  .tab-btn,
+  .star-btn,
+  .chk-label,
+  .hm-cell {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:active:not(:disabled),
+  [role="button"]:active {
+    opacity: 0.9;
+    transform: scale(0.985);
+  }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
@@ -1053,7 +1080,7 @@
                 transform var(--t-fast) var(--ease);
   }
   .btn:hover { border-color: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-md); }
-  .btn:active { transform: translateY(1px); box-shadow: var(--shadow-sm); }
+  .btn:active { transform: scale(0.97); box-shadow: var(--shadow-sm); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
   .btn.danger:hover { border-color: var(--bad); color: var(--bad); background: var(--bad-soft); }
   .btn-row { display: flex; gap: 0.5rem; margin-left: auto; flex-wrap: wrap; align-items: center; }
@@ -1145,17 +1172,32 @@
     background: var(--surface-2); color: var(--ink); border-radius: var(--r-sm); padding: 0.32rem 0.55rem;
     cursor: pointer; display: inline-flex; align-items: center; gap: 0.32rem; line-height: 1.1;
     border-left-width: 3px;
-    transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease),
-                transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+    transition: border-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+                background-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+                color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
+    user-select: none;
+    touch-action: manipulation;
   }
   .chip:hover {
     border-color: var(--accent); background: var(--surface);
     box-shadow: var(--shadow-sm); transform: translateY(-1px);
   }
-  .chip:active { transform: translateY(0); }
+  .chip:active { transform: scale(0.97); }
 
-  /* Star mark button inside problem chips */
+  .chip .lbl {
+    text-decoration: line-through;
+    text-decoration-color: transparent;
+    text-decoration-thickness: 1.5px;
+    transition: text-decoration-color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+                color 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Star mark button inside problem chips (GPU composited) */
   .chip .star-btn {
     display: inline-flex;
     align-items: center;
@@ -1169,6 +1211,9 @@
     line-height: 1;
     opacity: 0.32;
     text-decoration: none !important;
+    touch-action: manipulation;
+    will-change: transform;
+    transform: translateZ(0);
     transition: transform var(--t-fast) var(--ease), color var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease);
   }
   .chip:hover .star-btn {
@@ -1177,7 +1222,7 @@
   .chip .star-btn:hover {
     opacity: 1;
     color: #f59e0b;
-    transform: scale(1.3);
+    transform: scale(1.3) translateZ(0);
   }
   .chip.starred .star-btn,
   .chip.flagged .star-btn,
@@ -1198,11 +1243,12 @@
   }
   .chip .star-btn.just-starred {
     animation: starPop 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+    will-change: transform;
   }
   @keyframes starPop {
-    0% { transform: scale(0.7); }
-    50% { transform: scale(1.45) rotate(15deg); }
-    100% { transform: scale(1) rotate(0); }
+    0% { transform: scale(0.7) translateZ(0); }
+    50% { transform: scale(1.45) rotate(15deg) translateZ(0); }
+    100% { transform: scale(1) rotate(0) translateZ(0); }
   }
 
   /* Starred problem chips highlight */
@@ -1246,7 +1292,8 @@
     opacity: 0.85;
   }
   .chip.solved .lbl {
-    text-decoration: line-through; text-decoration-thickness: 1px;
+    text-decoration-color: currentColor;
+    opacity: 0.82;
   }
   .chip.solved:hover { opacity: 1; border-color: var(--good); }
   .chip .go {
@@ -2809,12 +2856,13 @@
   }
   .hm-legend .hm-cell { width: 11px; height: 11px; cursor: default; }
 
-  /* Floating Hover Tooltip */
+  /* Floating Hover Tooltip (Task 4.2 - GPU transform and RAF) */
   .hm-tooltip {
-    position: fixed; z-index: 100; pointer-events: none;
+    position: fixed; top: 0; left: 0; z-index: 100; pointer-events: none;
     background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-md);
     padding: 0.75rem 0.95rem; box-shadow: var(--shadow-lg); font-size: 0.82rem;
     max-width: 280px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    will-change: transform;
     animation: fadeIn 0.12s var(--ease);
   }
   .hm-tt-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.25rem; }

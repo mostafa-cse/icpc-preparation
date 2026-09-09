@@ -251,8 +251,14 @@
     `;
   }
 
-  // ---------- Setup Interactive Tooltip ----------
+  // ---------- Setup Interactive Tooltip (Task 4.2: RAF Smoothing & GPU Transform) ----------
   let activeTooltip = null;
+  let cachedTtWidth = 220;
+  let cachedTtHeight = 80;
+  let ttRafId = null;
+  let pendingMouseX = 0;
+  let pendingMouseY = 0;
+
   function ensureTooltip() {
     if (activeTooltip) return activeTooltip;
     const tt = document.createElement("div");
@@ -262,6 +268,43 @@
     document.body.appendChild(tt);
     activeTooltip = tt;
     return tt;
+  }
+
+  function scheduleTooltipMove(clientX, clientY) {
+    pendingMouseX = clientX;
+    pendingMouseY = clientY;
+    if (!ttRafId) {
+      ttRafId = requestAnimationFrame(renderTooltipFrame);
+    }
+  }
+
+  function renderTooltipFrame() {
+    ttRafId = null;
+    if (!activeTooltip || activeTooltip.style.display === "none") return;
+    const gap = 12;
+    let x = pendingMouseX + gap;
+    let y = pendingMouseY - cachedTtHeight - gap;
+
+    if (x + cachedTtWidth > window.innerWidth - 12) {
+      x = pendingMouseX - cachedTtWidth - gap;
+    }
+    if (y < 12) {
+      y = pendingMouseY + gap;
+    }
+
+    const finalX = Math.max(8, Math.round(x));
+    const finalY = Math.max(8, Math.round(y));
+    activeTooltip.style.transform = `translate3d(${finalX}px, ${finalY}px, 0)`;
+  }
+
+  function hideTooltip() {
+    if (ttRafId) {
+      cancelAnimationFrame(ttRafId);
+      ttRafId = null;
+    }
+    if (activeTooltip) {
+      activeTooltip.style.display = "none";
+    }
   }
 
   function attachTooltipListeners(container, stats) {
@@ -299,15 +342,17 @@
           ${chipsHtml}
         `;
         tt.style.display = "block";
-        positionTooltip(e, tt);
+        cachedTtWidth = tt.offsetWidth || 220;
+        cachedTtHeight = tt.offsetHeight || 80;
+        scheduleTooltipMove(e.clientX, e.clientY);
       });
 
       cell.addEventListener("mousemove", e => {
-        positionTooltip(e, tt);
+        scheduleTooltipMove(e.clientX, e.clientY);
       });
 
       cell.addEventListener("mouseleave", () => {
-        tt.style.display = "none";
+        hideTooltip();
       });
 
       // Quick filter on click
@@ -323,23 +368,6 @@
         }
       });
     });
-  }
-
-  function positionTooltip(e, tt) {
-    const gap = 12;
-    const ttRect = tt.getBoundingClientRect();
-    let x = e.clientX + gap;
-    let y = e.clientY - ttRect.height - gap;
-
-    if (x + ttRect.width > window.innerWidth - 12) {
-      x = e.clientX - ttRect.width - gap;
-    }
-    if (y < 12) {
-      y = e.clientY + gap;
-    }
-
-    tt.style.left = `${Math.max(8, x)}px`;
-    tt.style.top = `${Math.max(8, y)}px`;
   }
 
   // ---------- Main Render Function ----------

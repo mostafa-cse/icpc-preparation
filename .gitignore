@@ -1,3 +1,7 @@
 # local backup of the pre-split single-file version
 *.bak
 .DS_Store
+USACO-Guide.md
+Lougu-Training.md
+CSES.md
+Cp-books.md

@@ -5,9 +5,37 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ICPC Final Sprint — 16-Week Training Program</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏁</text></svg>">
+<script>
+// Prevent Navigator LockManager exclusive lock errors across tabs and background states
+(function() {
+  if (typeof navigator !== "undefined" && navigator.locks && typeof navigator.locks.request === "function") {
+    var _origReq = navigator.locks.request.bind(navigator.locks);
+    navigator.locks.request = function(name, opts, cb) {
+      if (typeof opts === "function") { cb = opts; opts = {}; }
+      return _origReq(name, opts, async function(lock) {
+        if (!lock && opts && opts.ifAvailable) {
+          return await cb({ name: name, mode: opts.mode || "exclusive" });
+        }
+        return await cb(lock);
+      }).catch(async function(err) {
+        if (err && /LockManager lock .* immediately failed/i.test(err.message || String(err))) {
+          if (typeof cb === "function") return await cb({ name: name, mode: "exclusive" });
+        }
+        throw err;
+      });
+    };
+  }
+  window.addEventListener("unhandledrejection", function(e) {
+    if (e && e.reason && /LockManager lock .* immediately failed/i.test(e.reason.message || String(e.reason))) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+})();
+</script>
 <link rel="stylesheet" href="styles.css?v=0c208ad0">
 <script src="theme.js?v=8c68bc43"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script src="supabase-config.js?v=f64f5749"></script>
 </head>
 <body>

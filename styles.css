@@ -102,7 +102,7 @@
   }
 
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
   html {
     font-size: 18px; /* Medium baseline scale across entire website */
     scroll-behavior: smooth;
@@ -118,6 +118,9 @@
     text-rendering: optimizeLegibility;
     accent-color: var(--accent);
     transition: background-color var(--t-med) var(--ease), color var(--t-med) var(--ease);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
   ::-webkit-scrollbar { width: 11px; height: 11px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -146,7 +149,23 @@
     letter-spacing: 0.12em; font-size: 0.72rem; color: var(--ink-faint); margin: 0 0 0.3rem;
   }
 
-  .app { max-width: 1440px; margin: 0 auto; padding: 0.35rem 2rem 5rem; }
+  .app {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    padding: 0.35rem 2rem 3.5rem;
+    min-height: calc(100vh - 56px);
+  }
+  .app > main {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
 
   /* ---------- Full-Width CP Topbar (Expanded Sticky Command Bar) ---------- */
   .topbar.cp-topbar {
@@ -620,8 +639,8 @@
   .timebox { display: none !important; }
 
   /* ---------- Panels ---------- */
-  .panel { display: none; padding-top: 0.85rem; }
-  .panel.active { display: block; }
+  .panel { display: none; padding-top: 0.85rem; width: 100%; }
+  .panel.active { display: block; flex: 1 0 auto; width: 100%; }
   #panel-checklist { padding-top: 0.15rem; }
 
   /* ---------- Routine doc styling ---------- */
@@ -1052,8 +1071,12 @@
 
   /* ---------- Footer ---------- */
   footer.app-footer {
-    margin-top: 4rem; padding-top: 2.2rem; border-top: 1px solid var(--line);
+    margin-top: auto;
+    padding-top: 3.5rem;
+    border-top: 1px solid var(--line);
     color: var(--ink-faint);
+    width: 100%;
+    box-sizing: border-box;
   }
   .foot-grid {
     display: grid; gap: 2rem 2.5rem;
@@ -1405,16 +1428,42 @@
 
   #authScreen {
     position: fixed; inset: 0; z-index: 9999;
-    display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    padding: 2rem 1.5rem 1.25rem;
+    overflow-y: auto;
+    box-sizing: border-box;
     background:
       radial-gradient(60rem 30rem at 50% -10%, var(--accent-soft), transparent 70%),
       var(--bg);
+  }
+  .auth-card-wrap {
+    margin: auto 0;
+    display: flex;
+    justify-content: center;
+    width: 100%;
   }
   .auth-card {
     width: 100%; max-width: 21rem; text-align: center;
     background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg);
     padding: 2.2rem 1.7rem 1.7rem; box-shadow: var(--shadow-lg);
     animation: nb-rise var(--t-med) var(--ease);
+  }
+  .auth-footer {
+    width: 100%;
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+    max-width: 32rem;
+    margin: 0 auto;
+  }
+  .auth-footer p { margin: 0; }
+  .auth-foot-sub {
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+    margin-top: 0.25rem;
+    letter-spacing: 0.04em;
   }
   .lock-mark {
     display: inline-grid; place-items: center; width: 3rem; height: 3rem;

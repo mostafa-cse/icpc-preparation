@@ -111,26 +111,32 @@
     const el = document.createElement("div");
     el.id = "authScreen";
     el.innerHTML =
-      '<form class="auth-card" id="authForm" autocomplete="on">' +
-        '<span class="lock-mark">🏁</span>' +
-        '<h1>ICPC · 16-Week Plan</h1>' +
-        '<p class="auth-sub" id="authSub">Sign in to load your progress.</p>' +
-        '<div class="auth-tabs">' +
-          '<button type="button" class="auth-tab active" data-mode="signin">Sign in</button>' +
-          '<button type="button" class="auth-tab" data-mode="signup">Create account</button>' +
-        "</div>" +
-        '<label class="auth-field auth-name" hidden>Display name' +
-          '<input type="text" id="authName" autocomplete="nickname" placeholder="Mostafa"></label>' +
-        '<label class="auth-field">Email' +
-          '<input type="email" id="authEmail" autocomplete="email" required placeholder="you@gmail.com">' +
-          '<small class="auth-hint" id="authEmailHint" hidden>Gmail addresses only. ' +
-            "You'll get a confirmation link before you can sign in.</small></label>" +
-        '<label class="auth-field">Password' +
-          '<input type="password" id="authPass" autocomplete="current-password" required placeholder="At least 6 characters"></label>' +
-        '<p class="auth-msg" id="authMsg" role="alert"></p>' +
-        '<button type="submit" class="btn primary" id="authBtn">Sign in</button>' +
-        '<button type="button" class="lock-link" id="authForgot">Forgot password?</button>' +
-      "</form>";
+      '<div class="auth-card-wrap">' +
+        '<form class="auth-card" id="authForm" autocomplete="on">' +
+          '<span class="lock-mark">🏁</span>' +
+          '<h1>ICPC · 16-Week Plan</h1>' +
+          '<p class="auth-sub" id="authSub">Sign in to load your progress.</p>' +
+          '<div class="auth-tabs">' +
+            '<button type="button" class="auth-tab active" data-mode="signin">Sign in</button>' +
+            '<button type="button" class="auth-tab" data-mode="signup">Create account</button>' +
+          '</div>' +
+          '<label class="auth-field auth-name" hidden>Display name' +
+            '<input type="text" id="authName" autocomplete="nickname" placeholder="Mostafa"></label>' +
+          '<label class="auth-field">Email' +
+            '<input type="email" id="authEmail" autocomplete="email" required placeholder="you@gmail.com">' +
+            '<small class="auth-hint" id="authEmailHint" hidden>Gmail addresses only. ' +
+              "You'll get a confirmation link before you can sign in.</small></label>" +
+          '<label class="auth-field">Password' +
+            '<input type="password" id="authPass" autocomplete="current-password" required placeholder="At least 6 characters"></label>' +
+          '<p class="auth-msg" id="authMsg" role="alert"></p>' +
+          '<button type="submit" class="btn primary" id="authBtn">Sign in</button>' +
+          '<button type="button" class="lock-link" id="authForgot">Forgot password?</button>' +
+        '</form>' +
+      '</div>' +
+      '<footer class="auth-footer">' +
+        '<p>© 2026 Mostafa Kamal · Built for the ICPC final sprint</p>' +
+        '<p class="auth-foot-sub">5,089 problems · 10 training blocks · Syncs across your devices</p>' +
+      '</footer>';
     document.body.appendChild(el);
 
     const form = document.getElementById("authForm");
@@ -255,19 +261,24 @@
     const el = document.createElement("div");
     el.id = "authScreen";
     el.innerHTML =
-      '<form class="auth-card" id="pwForm" autocomplete="on" novalidate>' +
-        '<span class="lock-mark">🔑</span>' +
-        "<h1>Set a new password</h1>" +
-        '<p class="auth-sub">You followed a reset link. Choose a new password to finish.</p>' +
-        '<label class="auth-field">New password' +
-          '<input type="password" id="pwPass" autocomplete="new-password" required ' +
-            'placeholder="At least 6 characters"></label>' +
-        '<label class="auth-field">Repeat it' +
-          '<input type="password" id="pwPass2" autocomplete="new-password" required ' +
-            'placeholder="Same again"></label>' +
-        '<p class="auth-msg" id="pwMsg" role="alert"></p>' +
-        '<button type="submit" class="btn primary" id="pwBtn">Save password</button>' +
-      "</form>";
+      '<div class="auth-card-wrap">' +
+        '<form class="auth-card" id="pwForm" autocomplete="on" novalidate>' +
+          '<span class="lock-mark">🔑</span>' +
+          "<h1>Set a new password</h1>" +
+          '<p class="auth-sub">You followed a reset link. Choose a new password to finish.</p>' +
+          '<label class="auth-field">New password' +
+            '<input type="password" id="pwPass" autocomplete="new-password" required ' +
+              'placeholder="At least 6 characters"></label>' +
+          '<label class="auth-field">Repeat it' +
+            '<input type="password" id="pwPass2" autocomplete="new-password" required ' +
+              'placeholder="Same again"></label>' +
+          '<p class="auth-msg" id="pwMsg" role="alert"></p>' +
+          '<button type="submit" class="btn primary" id="pwBtn">Save password</button>' +
+        '</form>' +
+      '</div>' +
+      '<footer class="auth-footer">' +
+        '<p>© 2026 Mostafa Kamal · Built for the ICPC final sprint</p>' +
+      '</footer>';
     document.body.appendChild(el);
 
     addPasswordToggles(el);
@@ -369,16 +380,21 @@
     const el = document.createElement("div");
     el.id = "authScreen";
     el.innerHTML =
-      '<div class="auth-card status-card">' +
-        '<span class="lock-mark">' + copy.mark + "</span>" +
-        "<h1>" + esc(copy.title) + "</h1>" +
-        '<p class="auth-sub">' + esc(copy.body) + "</p>" +
-        (profile && profile.status_reason
-          ? '<p class="status-reason"><b>Reason:</b> ' + esc(profile.status_reason) + "</p>"
-          : "") +
-        '<p class="status-who">' + esc((user && user.email) || "") + "</p>" +
-        '<button type="button" class="btn" id="statusSignOut">Sign out</button>' +
-      "</div>";
+      '<div class="auth-card-wrap">' +
+        '<div class="auth-card status-card">' +
+          '<span class="lock-mark">' + copy.mark + "</span>" +
+          "<h1>" + esc(copy.title) + "</h1>" +
+          '<p class="auth-sub">' + esc(copy.body) + "</p>" +
+          (profile && profile.status_reason
+            ? '<p class="status-reason"><b>Reason:</b> ' + esc(profile.status_reason) + "</p>"
+            : "") +
+          '<p class="status-who">' + esc((user && user.email) || "") + "</p>" +
+          '<button type="button" class="btn" id="statusSignOut">Sign out</button>' +
+        '</div>' +
+      '</div>' +
+      '<footer class="auth-footer">' +
+        '<p>© 2026 Mostafa Kamal · Built for the ICPC final sprint</p>' +
+      '</footer>';
     document.body.appendChild(el);
     document.getElementById("statusSignOut").addEventListener("click", async () => {
       try { if (sb) await sb.auth.signOut(); } catch (e) {}

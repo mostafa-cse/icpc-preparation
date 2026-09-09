@@ -130,6 +130,11 @@
   const allIds = new Set();
   const byFileIds = {}; FILES.forEach(f => byFileIds[f] = new Set());
   const byPhaseIds = {}; PHASES.forEach(p => byPhaseIds[p.id] = new Set());
+  const byFilePhaseIds = {};
+  FILES.forEach(f => {
+    byFilePhaseIds[f] = {};
+    PHASES.forEach(p => { byFilePhaseIds[f][p.id] = new Set(); });
+  });
 
   let secCounter = 0;
   FILES.forEach(file => {
@@ -145,6 +150,9 @@
         allIds.add(it.id);
         byFileIds[file].add(it.id);
         byPhaseIds[sec.phase] && byPhaseIds[sec.phase].add(it.id);
+        if (byFilePhaseIds[file] && byFilePhaseIds[file][sec.phase]) {
+          byFilePhaseIds[file][sec.phase].add(it.id);
+        }
       });
       allSections.push(sec);
     });
@@ -207,52 +215,192 @@
     return n;
   }
 
-  // ---------- Rendering: dashboard ----------
+  // ---------- Rendering: Checklist Hub & Dashboard ----------
   const dashBigNum = document.getElementById("dashBigNum");
   const dashBigBar = document.getElementById("dashBigBar");
   const phaseGrid = document.getElementById("phaseGrid");
   const fileGrid = document.getElementById("fileGrid");
 
+  function renderChecklistHub() {
+    const grid = document.getElementById("checklistTrackGrid");
+    if (!grid) return;
+    grid.innerHTML = "";
+
+    PHASES.forEach(p => {
+      const ids = byPhaseIds[p.id] || new Set();
+      const d = countSet(ids), t = ids.size;
+      const pct = t ? (100 * d / t).toFixed(1) : "0.0";
+      const weeksText = weeksOf(p);
+      const isCurrentActive = filters.phase === String(p.id);
+
+      const card = document.createElement("div");
+      card.className = "checklist-track-card" + (isCurrentActive ? " is-active-track" : "");
+      card.dataset.phaseId = String(p.id);
+      card.setAttribute("role", "button");
+      card.setAttribute("tabindex", "0");
+      card.innerHTML = `
+        <div class="track-card-head">
+          <div class="track-card-pill-row">
+            <span class="track-index-badge">Track ${p.id + 1}</span>
+            <span class="track-time-pill">${esc(weeksText)}</span>
+          </div>
+          <h3 class="track-title">${esc(p.name)}</h3>
+          <p class="track-desc">${esc(p.desc)}</p>
+        </div>
+        <div class="track-progress-section">
+          <div class="track-stats-row">
+            <span class="track-stat-count"><strong>${d.toLocaleString()}</strong> / ${t.toLocaleString()} solved</span>
+            <span class="track-stat-pct">${pct}%</span>
+          </div>
+          <div class="track-bar"><i style="width:${pct}%"></i></div>
+        </div>
+        <div class="track-footer">
+          <div class="track-sources-tag" title="${esc(p.src)}">
+            <span class="sources-icon">📚</span>
+            <span class="sources-text">${esc(p.src.split(" · ").slice(0, 3).join(" · "))}${p.src.split(" · ").length > 3 ? "..." : ""}</span>
+          </div>
+          <button type="button" class="btn-open-track" data-track-id="${p.id}">
+            Open Checklist →
+          </button>
+        </div>
+      `;
+
+      const triggerOpen = () => openChecklistPage(p.id);
+      card.addEventListener("click", triggerOpen);
+      card.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          triggerOpen();
+        }
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  function updateChecklistViewState() {
+    const hub = document.getElementById("checklistHub");
+    const detail = document.getElementById("checklistDetail");
+    const pSel = document.getElementById("phaseSelect");
+
+    if (filters.phase !== "") {
+      if (hub) hub.style.display = "none";
+      if (detail) detail.style.display = "block";
+      const currentPhase = PHASES.find(p => String(p.id) === String(filters.phase));
+      if (currentPhase) {
+        const activeBadge = document.getElementById("activeTrackBadge");
+        const activeTitle = document.getElementById("activeTrackTitle");
+        const activeWeeks = document.getElementById("activeTrackWeeks");
+        if (activeBadge) activeBadge.textContent = "Track " + (currentPhase.id + 1);
+        if (activeTitle) activeTitle.textContent = currentPhase.name;
+        if (activeWeeks) activeWeeks.textContent = weeksOf(currentPhase);
+
+        const ids = byPhaseIds[currentPhase.id] || new Set();
+        const d = countSet(ids);
+        const t = ids.size;
+        const rem = Math.max(0, t - d);
+        const pct = t ? (100 * d / t).toFixed(1) : "0.0";
+
+        const totalEl = document.getElementById("phaseTotalCount");
+        const solvedEl = document.getElementById("phaseSolvedCount");
+        const remainEl = document.getElementById("phaseRemainCount");
+
+        if (totalEl) totalEl.textContent = t.toLocaleString();
+        if (solvedEl) solvedEl.textContent = d.toLocaleString();
+        if (remainEl) remainEl.textContent = rem.toLocaleString();
+      }
+      if (pSel) pSel.value = String(filters.phase);
+    } else {
+      if (hub) hub.style.display = "block";
+      if (detail) detail.style.display = "none";
+      if (pSel) pSel.value = "";
+    }
+  }
+
+  function openChecklistPage(phaseId) {
+    filters.phase = String(phaseId);
+    const pSel = document.getElementById("phaseSelect");
+    if (pSel) pSel.value = filters.phase;
+    activateTab("checklist");
+    updateChecklistViewState();
+    buildAccordions();
+    if (window.location.hash !== "#checklist/" + phaseId) {
+      try { history.replaceState(null, "", "#checklist/" + phaseId); } catch (e) {}
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function showChecklistHub() {
+    filters.phase = "";
+    const pSel = document.getElementById("phaseSelect");
+    if (pSel) pSel.value = "";
+    activateTab("checklist");
+    updateChecklistViewState();
+    renderChecklistHub();
+    if (window.location.hash !== "#checklist") {
+      try { history.replaceState(null, "", "#checklist"); } catch (e) {}
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function renderDashboard() {
     const total = allIds.size, done = countSet(allIds);
-    dashBigNum.textContent = done.toLocaleString() + " / " + total.toLocaleString();
-    dashBigBar.style.width = (total ? (100 * done / total) : 0).toFixed(1) + "%";
+    const pct = total ? (100 * done / total).toFixed(1) : "0.0";
 
-    phaseGrid.innerHTML = "";
-    PHASES.forEach(p => {
-      const ids = byPhaseIds[p.id];
-      const d = countSet(ids), t = ids.size;
-      const tile = document.createElement("button");
-      tile.type = "button";
-      tile.className = "tile" + (filters.phase === String(p.id) ? " is-active" : "");
-      tile.innerHTML = `<span class="t-name">${p.id + 1}. ${esc(p.name)}</span>
-        <div class="bar"><i style="width:${t ? (100*d/t).toFixed(1) : 0}%"></i></div>
-        <span class="t-count">${d}/${t} · ${esc(weeksOf(p))}</span>`;
-      tile.addEventListener("click", () => {
-        filters.phase = (filters.phase === String(p.id)) ? "" : String(p.id);
-        document.getElementById("phaseSelect").value = filters.phase;
-        applyFilters();
-      });
-      phaseGrid.appendChild(tile);
-    });
+    const hubSolved = document.getElementById("hubSolvedCount");
+    const hubPct = document.getElementById("hubPercentSolved");
+    const hubBar = document.getElementById("hubOverallBar");
+    if (hubSolved) hubSolved.textContent = done.toLocaleString() + " / " + total.toLocaleString();
+    if (hubPct) hubPct.textContent = pct + "%";
+    if (hubBar) hubBar.style.width = pct + "%";
 
-    fileGrid.innerHTML = "";
-    FILES.forEach(f => {
-      const ids = byFileIds[f];
-      const d = countSet(ids), t = ids.size;
-      const tile = document.createElement("button");
-      tile.type = "button";
-      tile.className = "tile" + (filters.file === f ? " is-active" : "");
-      tile.innerHTML = `<span class="t-name">${esc(f.replace(".md",""))}</span>
-        <div class="bar"><i style="width:${t ? (100*d/t).toFixed(1) : 0}%"></i></div>
-        <span class="t-count">${d}/${t} unique</span>`;
-      tile.addEventListener("click", () => {
-        filters.file = (filters.file === f) ? "" : f;
-        document.getElementById("fileSelect").value = filters.file;
-        applyFilters();
+    if (dashBigNum) dashBigNum.textContent = done.toLocaleString() + " / " + total.toLocaleString();
+    if (dashBigBar) dashBigBar.style.width = pct + "%";
+
+    if (phaseGrid) {
+      phaseGrid.innerHTML = "";
+      PHASES.forEach(p => {
+        const ids = byPhaseIds[p.id];
+        const d = countSet(ids), t = ids.size;
+        const tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = "tile" + (filters.phase === String(p.id) ? " is-active" : "");
+        tile.innerHTML = `<span class="t-name">${p.id + 1}. ${esc(p.name)}</span>
+          <div class="bar"><i style="width:${t ? (100*d/t).toFixed(1) : 0}%"></i></div>
+          <span class="t-count">${d}/${t} · ${esc(weeksOf(p))}</span>`;
+        tile.addEventListener("click", () => {
+          if (filters.phase === String(p.id)) {
+            showChecklistHub();
+          } else {
+            openChecklistPage(p.id);
+          }
+        });
+        phaseGrid.appendChild(tile);
       });
-      fileGrid.appendChild(tile);
-    });
+    }
+
+    if (fileGrid) {
+      fileGrid.innerHTML = "";
+      FILES.forEach(f => {
+        const ids = byFileIds[f];
+        const d = countSet(ids), t = ids.size;
+        const tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = "tile" + (filters.file === f ? " is-active" : "");
+        tile.innerHTML = `<span class="t-name">${esc(f.replace(".md",""))}</span>
+          <div class="bar"><i style="width:${t ? (100*d/t).toFixed(1) : 0}%"></i></div>
+          <span class="t-count">${d}/${t} unique</span>`;
+        tile.addEventListener("click", () => {
+          filters.file = (filters.file === f) ? "" : f;
+          const fSel = document.getElementById("fileSelect");
+          if (fSel) fSel.value = filters.file;
+          applyFilters();
+        });
+        fileGrid.appendChild(tile);
+      });
+    }
+
+    renderChecklistHub();
   }
 
   // ---------- Rendering: block list (routine tab) ----------
@@ -295,7 +443,16 @@
   // a lot of scrolling when you only care about one of them.
   const CLOSED_FILES_KEY = "icpc_closed_files";
   let closedFiles = new Set();
-  try { closedFiles = new Set(JSON.parse(localStorage.getItem(CLOSED_FILES_KEY) || "[]")); } catch (e) {}
+  try {
+    const raw = localStorage.getItem(CLOSED_FILES_KEY);
+    if (raw !== null) {
+      closedFiles = new Set(JSON.parse(raw));
+    } else {
+      closedFiles = new Set(FILES);
+    }
+  } catch (e) {
+    closedFiles = new Set(FILES);
+  }
 
   function updateChipsForId(id) {
     const arr = chipRegistry.get(id);
@@ -333,6 +490,7 @@
     renderBlocks();
     renderPace();
     updateFileAndSectionCounters();
+    updateChecklistViewState();
     renderTodayStrip();
     document.dispatchEvent(new CustomEvent("icpc:progress_updated"));
   }
@@ -370,11 +528,13 @@
       if (!visibleSecs.length) return;
       anySectionVisible = true;
 
-      const fileIds = byFileIds[file];
+      const filePhaseActive = filters.phase !== "" && byFilePhaseIds[file] && byFilePhaseIds[file][filters.phase];
+      const fileIds = filePhaseActive ? byFilePhaseIds[file][filters.phase] : byFileIds[file];
       const fd = countSet(fileIds), ft = fileIds.size;
       const block = document.createElement("div");
       block.className = "file-block";
       block.dataset.file = file;
+      block._fileIds = fileIds;
       // Collapsed by choice, or forced open while a filter is narrowing things
       // down — hiding the only matches would be worse than useless.
       const filtering = !!(filters.text || filters.hideSolved || filters.deepOnly || filters.flaggedOnly);
@@ -510,14 +670,15 @@
 
   function updateFileAndSectionCounters() {
     document.querySelectorAll(".file-block").forEach(block => {
-      const h3 = block.querySelector(".file-head h3");
-      if (!h3) return;
-      const file = h3.textContent + ".md";
-      const ids = byFileIds[file];
+      const file = block.dataset.file;
+      const filePhaseActive = filters.phase !== "" && byFilePhaseIds[file] && byFilePhaseIds[file][filters.phase];
+      const ids = filePhaseActive ? byFilePhaseIds[file][filters.phase] : (block._fileIds || byFileIds[file]);
       if (!ids) return;
       const d = countSet(ids), t = ids.size;
-      block.querySelector(".file-count").textContent = d + "/" + t;
-      block.querySelector(".file-head .bar > i").style.width = (t ? (100*d/t).toFixed(1) : 0) + "%";
+      const countEl = block.querySelector(".file-count");
+      if (countEl) countEl.textContent = d + "/" + t;
+      const barEl = block.querySelector(".file-head .bar > i");
+      if (barEl) barEl.style.width = (t ? (100*d/t).toFixed(1) : 0) + "%";
     });
     document.querySelectorAll(".sec-card").forEach(card => {
       const sec = card._sec;
@@ -536,6 +697,7 @@
   }
 
   function applyFilters() {
+    updateChecklistViewState();
     buildAccordions();
     renderDashboard();
   }
@@ -634,18 +796,38 @@
   }
 
   // ---------- Filter bar wiring ----------
-  const fileSelect = document.getElementById("fileSelect");
-  FILES.forEach(f => { const o = document.createElement("option"); o.value = f; o.textContent = f.replace(".md",""); fileSelect.appendChild(o); });
-  const phaseSelect = document.getElementById("phaseSelect");
-  PHASES.forEach(p => { const o = document.createElement("option"); o.value = String(p.id); o.textContent = (p.id+1)+". "+p.name; phaseSelect.appendChild(o); });
-
   const searchBox = document.getElementById("searchBox");
-  searchBox.addEventListener("input", e => { filters.text = e.target.value.trim(); applyFilters(); });
-  fileSelect.addEventListener("change", e => { filters.file = e.target.value; applyFilters(); });
-  phaseSelect.addEventListener("change", e => { filters.phase = e.target.value; applyFilters(); });
-  document.getElementById("hideSolved").addEventListener("change", e => { filters.hideSolved = e.target.checked; applyFilters(); });
-  document.getElementById("deepOnly").addEventListener("change", e => { filters.deepOnly = e.target.checked; applyFilters(); });
-  document.getElementById("flaggedOnly").addEventListener("change", e => { filters.flaggedOnly = e.target.checked; applyFilters(); });
+  if (searchBox) searchBox.addEventListener("input", e => { filters.text = e.target.value.trim(); applyFilters(); });
+  const fileSelect = document.getElementById("fileSelect");
+  if (fileSelect) {
+    FILES.forEach(f => { const o = document.createElement("option"); o.value = f; o.textContent = f.replace(".md",""); fileSelect.appendChild(o); });
+    fileSelect.addEventListener("change", e => { filters.file = e.target.value; applyFilters(); });
+  }
+  const phaseSelect = document.getElementById("phaseSelect");
+  if (phaseSelect) {
+    phaseSelect.innerHTML = '<option value="">← All Checklists (Directory)</option>';
+    PHASES.forEach(p => { const o = document.createElement("option"); o.value = String(p.id); o.textContent = (p.id+1)+". "+p.name; phaseSelect.appendChild(o); });
+    phaseSelect.addEventListener("change", e => {
+      if (e.target.value === "") {
+        showChecklistHub();
+      } else {
+        openChecklistPage(e.target.value);
+      }
+    });
+  }
+
+  const checklistBackBtn = document.getElementById("checklistBackBtn");
+  if (checklistBackBtn) {
+    checklistBackBtn.addEventListener("click", () => {
+      showChecklistHub();
+    });
+  }
+  const hideSolvedEl = document.getElementById("hideSolved");
+  if (hideSolvedEl) hideSolvedEl.addEventListener("change", e => { filters.hideSolved = e.target.checked; applyFilters(); });
+  const deepOnlyEl = document.getElementById("deepOnly");
+  if (deepOnlyEl) deepOnlyEl.addEventListener("change", e => { filters.deepOnly = e.target.checked; applyFilters(); });
+  const flaggedOnlyEl = document.getElementById("flaggedOnly");
+  if (flaggedOnlyEl) flaggedOnlyEl.addEventListener("change", e => { filters.flaggedOnly = e.target.checked; applyFilters(); });
   const nextBtn = document.getElementById("nextBtn");
   if (nextBtn) nextBtn.addEventListener("click", () => {
     const pick = pickNext();
@@ -668,55 +850,59 @@
       if (open) closedFiles.delete(b.dataset.file); else closedFiles.add(b.dataset.file);
     });
     localStorage.setItem(CLOSED_FILES_KEY, JSON.stringify([...closedFiles]));
+    const expandChk = document.getElementById("expandAllChk");
+    if (expandChk && expandChk.checked !== open) expandChk.checked = open;
   }
-  document.getElementById("expandAllBtn").addEventListener("click", () => setAllOpen(true));
-  document.getElementById("collapseAllBtn").addEventListener("click", () => setAllOpen(false));
+  const expandAllChk = document.getElementById("expandAllChk");
+  if (expandAllChk) {
+    expandAllChk.addEventListener("change", e => setAllOpen(e.target.checked));
+  }
+  const expandAllBtn = document.getElementById("expandAllBtn");
+  if (expandAllBtn) expandAllBtn.addEventListener("click", () => setAllOpen(true));
+  const collapseAllBtn = document.getElementById("collapseAllBtn");
+  if (collapseAllBtn) collapseAllBtn.addEventListener("click", () => setAllOpen(false));
 
-  // ---------- Export / Import / Reset (two-step confirm, no native dialogs) ----------
-  function twoStepConfirm(btn, label, confirmLabel, action) {
-    let armed = false, timer = null;
-    btn.textContent = label;
-    btn.addEventListener("click", () => {
-      if (!armed) {
-        armed = true; btn.textContent = confirmLabel;
-        timer = setTimeout(() => { armed = false; btn.textContent = label; }, 3000);
-      } else {
-        clearTimeout(timer); armed = false; btn.textContent = label;
-        action();
-      }
+  // Legacy export/import/reset buttons (safely guarded)
+  const exportBtn = document.getElementById("exportBtn");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", () => {
+      const payload = { exportedAt: new Date().toISOString(), solved: [...solved], startDate: localStorage.getItem("icpc_start_date") || null };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "icpc-progress-" + new Date().toISOString().slice(0,10) + ".json";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
     });
   }
-
-  document.getElementById("exportBtn").addEventListener("click", () => {
-    const payload = { exportedAt: new Date().toISOString(), solved: [...solved], startDate: localStorage.getItem("icpc_start_date") || null };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "icpc-progress-" + new Date().toISOString().slice(0,10) + ".json";
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  });
-  document.getElementById("importBtn").addEventListener("click", () => document.getElementById("importFile").click());
-  document.getElementById("importFile").addEventListener("change", e => {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const payload = JSON.parse(reader.result);
-        if (Array.isArray(payload.solved)) {
-          solved = new Set(payload.solved);
-          persist();
-          if (payload.startDate) { localStorage.setItem("icpc_start_date", payload.startDate); startDateInput.value = payload.startDate; }
-          refreshAllChipVisuals(); refreshCounters(); renderTodayStrip();
-        }
-      } catch (err) { /* ignore malformed file */ }
-      e.target.value = "";
-    };
-    reader.readAsText(file);
-  });
-  twoStepConfirm(document.getElementById("resetBtn"), "Reset all", "Click again to confirm", () => {
-    solved = new Set(); flagged = new Set(); persist(); refreshAllChipVisuals(); refreshCounters();
-  });
+  const importBtn = document.getElementById("importBtn");
+  const importFile = document.getElementById("importFile");
+  if (importBtn && importFile) {
+    importBtn.addEventListener("click", () => importFile.click());
+    importFile.addEventListener("change", e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const payload = JSON.parse(reader.result);
+          if (Array.isArray(payload.solved)) {
+            solved = new Set(payload.solved);
+            persist();
+            if (payload.startDate) { localStorage.setItem("icpc_start_date", payload.startDate); startDateInput.value = payload.startDate; }
+            refreshAllChipVisuals(); refreshCounters(); renderTodayStrip();
+          }
+        } catch (err) { /* ignore malformed file */ }
+        e.target.value = "";
+      };
+      reader.readAsText(file);
+    });
+  }
+  const resetBtn = document.getElementById("resetBtn");
+  if (resetBtn) {
+    twoStepConfirm(resetBtn, "Reset all", "Click again to confirm", () => {
+      solved = new Set(); flagged = new Set(); persist(); refreshAllChipVisuals(); refreshCounters();
+    });
+  }
 
   // ---------- Tabs ----------
   function activateTab(name) {
@@ -875,13 +1061,7 @@
         btn.addEventListener("click", () => {
           dropdown.style.display = "none";
           cpPhaseDropdownOpen = false;
-          activateTab("checklist");
-          filters.phase = String(btn.dataset.jumpPhase);
-          const pSel = document.getElementById("phaseSelect");
-          if (pSel) pSel.value = filters.phase;
-          applyFilters();
-          expandMatching();
-          window.scrollTo({ top: 0, behavior: "smooth" });
+          openChecklistPage(btn.dataset.jumpPhase);
         });
       });
 
@@ -999,6 +1179,15 @@
       refreshCounters();
       document.dispatchEvent(new CustomEvent("icpc:progress_updated"));
     },
+    resetAll() {
+      solved = new Set();
+      flagged = new Set();
+      solveDates = {};
+      persist();
+      refreshAllChipVisuals();
+      refreshCounters();
+      document.dispatchEvent(new CustomEvent("icpc:progress_updated"));
+    },
     // Per-block and per-file counts, for the profile page.
     breakdown() {
       return {
@@ -1029,6 +1218,7 @@
     solveDates: () => solveDates,
     byPhaseIds: () => byPhaseIds,
     byFileIds: () => byFileIds,
+    byFilePhaseIds: () => byFilePhaseIds,
     phases: () => PHASES,
     files: () => FILES,
     allSections: () => allSections,
@@ -1039,18 +1229,17 @@
     activateTab: activateTab,
     applyFilters: (phaseId, file) => {
       if (phaseId !== undefined && phaseId !== null) {
-        filters.phase = String(phaseId);
-        const pSel = document.getElementById("phaseSelect");
-        if (pSel) pSel.value = filters.phase;
+        openChecklistPage(phaseId);
       }
       if (file !== undefined && file !== null) {
         filters.file = file;
         const fSel = document.getElementById("fileSelect");
         if (fSel) fSel.value = filters.file;
+        applyFilters();
       }
-      applyFilters();
-      expandMatching();
-    }
+    },
+    openChecklist: openChecklistPage,
+    showChecklistHub: showChecklistHub
   };
 
   // ---------- Keyboard ----------
@@ -1155,10 +1344,35 @@
     if (bar) ro.observe(bar);
   }
 
+  // ---------- Routing & Hash Navigation ----------
+  function handleHashRoute() {
+    const hash = (window.location.hash || "").replace(/^#/, "").trim();
+    if (!hash) return;
+    if (hash.startsWith("checklist")) {
+      const match = hash.match(/checklist\/(?:track-)?([0-9]+)/) || hash.match(/checklist\?phase=([0-9]+)/);
+      if (match) {
+        const phaseId = parseInt(match[1], 10);
+        if (phaseId >= 0 && phaseId <= 9) {
+          openChecklistPage(phaseId);
+          return;
+        }
+      }
+      showChecklistHub();
+      return;
+    }
+    const validTabs = ["dashboard", "routine", "checklist", "templates", "contests", "profile", "settings"];
+    if (validTabs.includes(hash)) {
+      activateTab(hash);
+    }
+  }
+
+  window.addEventListener("hashchange", handleHashRoute);
+
   // ---------- Init ----------
   document.getElementById("statTotalInline").textContent = allIds.size.toLocaleString();
   applyPlanText();
   renderTodayStrip();
   measureTopbar();
   refreshAll();
+  handleHashRoute();
 })();

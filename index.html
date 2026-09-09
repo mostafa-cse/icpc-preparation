@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ICPC Final Sprint — 16-Week Training Program</title>
-<link rel="stylesheet" href="styles.css?v=cc42bdf1">
+<link rel="stylesheet" href="styles.css?v=fd116bd9">
 <script src="theme.js?v=8c68bc43"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script src="supabase-config.js?v=f64f5749"></script>
@@ -27,13 +27,13 @@
     <div class="cp-nav-divider" aria-hidden="true"></div>
 
     <nav class="tabs cp-tabs" role="tablist">
-      <button class="tab active" data-tab="dashboard" type="button"><span class="tab-key">1</span>Dashboard</button>
-      <button class="tab" data-tab="routine" type="button"><span class="tab-key">2</span>Routine</button>
-      <button class="tab" data-tab="checklist" type="button"><span class="tab-key">3</span>Checklist</button>
-      <button class="tab" data-tab="templates" type="button"><span class="tab-key">4</span>Templates</button>
-      <button class="tab" data-tab="contests" type="button"><span class="tab-key">5</span>Contests</button>
-      <button class="tab" data-tab="profile" type="button"><span class="tab-key">6</span>Profile</button>
-      <button class="tab" data-tab="settings" type="button"><span class="tab-key">7</span>Settings</button>
+      <button class="tab active" data-tab="dashboard" type="button">Dashboard</button>
+      <button class="tab" data-tab="routine" type="button">Routine</button>
+      <button class="tab" data-tab="checklist" type="button">Checklist</button>
+      <button class="tab" data-tab="templates" type="button">Templates</button>
+      <button class="tab" data-tab="contests" type="button">Contests</button>
+      <button class="tab" data-tab="profile" type="button">Profile</button>
+      <button class="tab" data-tab="settings" type="button">Settings</button>
       <button class="tab" data-tab="admin" type="button" hidden>Admin</button>
     </nav>
   </div>
@@ -47,12 +47,6 @@
       <button type="button" class="cp-timer-btn" id="cpTimerToggle" title="Start/Pause Timer (t)">▶</button>
       <button type="button" class="cp-timer-btn" id="cpTimerReset" title="Reset Timer (T)">↺</button>
     </div>
-
-    <!-- Quick Random Next Unsolved Problem -->
-    <button type="button" class="cp-tool-btn cp-next-btn" id="cpNextProblemBtn" title="Jump to a random unsolved problem (n)">
-      <span class="cp-tool-icon">🎲</span>
-      <span class="cp-tool-label">Next Problem</span>
-    </button>
 
     <!-- Active Phase Status & Popover Trigger -->
     <div class="cp-phase-wrap">
@@ -186,34 +180,45 @@
       <!-- Dedicated Separated Checklist Page -->
       <div id="checklistDetail" class="checklist-detail" style="display:none">
         <div class="checklist-breadcrumb-bar" id="checklistBreadcrumb">
-          <button type="button" class="btn-back-hub" id="checklistBackBtn" title="Back to All Checklists">
-            <span class="back-arrow">←</span> All Checklists
-          </button>
-          <div class="breadcrumb-separator">/</div>
-          <div class="active-track-info">
-            <span class="track-badge" id="activeTrackBadge">Track 1</span>
-            <h2 class="active-track-title" id="activeTrackTitle">Foundations & Toolkit</h2>
-            <span class="active-track-stats" id="activeTrackStats">0 / 0 solved</span>
+          <div class="breadcrumb-left">
+            <button type="button" class="btn-back-hub" id="checklistBackBtn" title="Back to All Checklists">
+              <span class="back-arrow">←</span> All Checklists
+            </button>
+            <div class="breadcrumb-separator">/</div>
+            <div class="active-track-info">
+              <span class="track-badge" id="activeTrackBadge">Track 1</span>
+              <h2 class="active-track-title" id="activeTrackTitle">Foundations & Toolkit</h2>
+              <span class="active-track-weeks" id="activeTrackWeeks">Weeks 1–3</span>
+            </div>
+          </div>
+
+          <!-- Redesigned Horizontal Counter (Phase Progress removed) -->
+          <div class="phase-metrics-horizontal" id="phaseMetricsHorizontal">
+            <div class="phase-stat-chip total" title="Total problems in this phase">
+              <span class="ps-label">Total</span>
+              <span class="ps-val" id="phaseTotalCount">0</span>
+            </div>
+            <div class="phase-stat-divider" aria-hidden="true"></div>
+            <div class="phase-stat-chip solved" title="Solved problems in this phase">
+              <span class="ps-dot ps-good"></span>
+              <span class="ps-label">Solved</span>
+              <span class="ps-val" id="phaseSolvedCount">0</span>
+            </div>
+            <div class="phase-stat-divider" aria-hidden="true"></div>
+            <div class="phase-stat-chip remain" title="Remaining unsolved problems in this phase">
+              <span class="ps-dot ps-warn"></span>
+              <span class="ps-label">Remaining</span>
+              <span class="ps-val" id="phaseRemainCount">0</span>
+            </div>
           </div>
         </div>
 
-        <div class="filter-bar">
+        <div class="filter-bar single-line-filter-bar">
           <input type="search" id="searchBox" placeholder="Search problem id, e.g. CSES-1082…" autocomplete="off">
           <select id="fileSelect"><option value="">All files</option></select>
           <select id="phaseSelect"><option value="">All blocks</option></select>
           <label class="chk-label"><input type="checkbox" id="hideSolved"> Hide solved</label>
-          <label class="chk-label"><input type="checkbox" id="deepOnly"> Stretch-tier only</label>
-          <label class="chk-label"><input type="checkbox" id="flaggedOnly"> Flagged only <span id="flagCount" class="chk-count"></span></label>
-          <span class="key-hint">Right-click a problem to flag it · press <kbd>?</kbd> for shortcuts</span>
-          <div class="btn-row">
-            <button class="btn primary" id="nextBtn" type="button" title="Jump to a random unsolved problem in view (n)">Next problem →</button>
-            <button class="btn" id="expandAllBtn" type="button">Expand all</button>
-            <button class="btn" id="collapseAllBtn" type="button">Collapse all</button>
-            <button class="btn" id="exportBtn" type="button">Export progress</button>
-            <button class="btn" id="importBtn" type="button">Import progress</button>
-            <input type="file" id="importFile" accept="application/json" style="display:none">
-            <button class="btn danger" id="resetBtn" type="button">Reset all</button>
-          </div>
+          <label class="chk-label"><input type="checkbox" id="expandAllChk"> Expand</label>
         </div>
 
         <div id="fileAccordions"></div>
@@ -413,14 +418,14 @@
 
 <div id="printRoot" aria-hidden="true"></div>
 
-<script src="script.js?v=95727ac8"></script>
+<script src="script.js?v=2d9ef917"></script>
 <script src="prayer.js?v=06919d6a"></script>
 <script src="routine.js?v=ab597c13"></script>
 <script src="timer.js?v=dc2ed1df"></script>
 <script src="templates.js?v=c2f46bc6"></script>
 <script src="contests.js?v=c5893920"></script>
-<script src="account.js?v=1f926831"></script>
-<script src="settings.js?v=f5a0f9b2"></script>
+<script src="account.js?v=51879b1d"></script>
+<script src="settings.js?v=3de1c8e4"></script>
 <script src="dashboard.js?v=27ea0e31"></script>
 <script src="admin.js?v=cf427d89"></script>
 </body>

@@ -244,6 +244,9 @@
     const routinePresets = window.ICPCRoutine ? window.ICPCRoutine.routinePresets() : {};
     const activePreset = routinePresets[currentRoutine] || { name: "Intense ICPC Sprint", desc: "", tagline: "" };
 
+    const user = window.ICPCAccount ? window.ICPCAccount.currentUser() : null;
+    const isOffline = window.ICPCAccount ? window.ICPCAccount.isOffline() : true;
+
     const dayStartHHMM = window.ICPCRoutine ? window.ICPCRoutine.dayStartHHMM() : "06:00";
     const startDate = localStorage.getItem("icpc_start_date") || new Date().toISOString().slice(0, 10);
     const targetContestDate = localStorage.getItem(TARGET_DATE_STORE) || "";
@@ -432,35 +435,19 @@
         </form>
       </section>
 
-      <!-- ================= SECTION 2: TIMING & SCHEDULE ================= -->
+      <!-- ================= SECTION 2: MILESTONES & TARGET DATES ================= -->
       <section class="doc-section st-section">
         <div class="st-section-head">
           <div class="st-section-title">
-            <span class="st-section-icon">⏰</span>
+            <span class="st-section-icon">📅</span>
             <div>
-              <h3>Set Starting Time &amp; Milestones</h3>
-              <p>Set when your training day begins, when your program sprint started, and your upcoming target contest date.</p>
+              <h3>Milestones &amp; Target Dates</h3>
+              <p>Set when your program sprint started and your upcoming target competition countdown.</p>
             </div>
           </div>
         </div>
 
         <div class="st-card-grid">
-          <!-- Day Start Time Card -->
-          <div class="st-card">
-            <h4>Start of Training Day</h4>
-            <p class="st-card-sub">Both Routine schedules (Practice and Contest days) anchor to this wall-clock time.</p>
-            <div class="st-time-box">
-              <input type="time" class="st-input st-time-input day-start-input" id="stDayStart" step="900" value="${esc(dayStartHHMM)}">
-              <div class="st-presets">
-                <button type="button" class="st-chip-btn" data-time="05:00">05:00 Early Bird</button>
-                <button type="button" class="st-chip-btn" data-time="06:00">06:00 Standard</button>
-                <button type="button" class="st-chip-btn" data-time="07:00">07:00 Balanced</button>
-                <button type="button" class="st-chip-btn" data-time="08:30">08:30 Night Owl</button>
-              </div>
-            </div>
-            <p class="st-hint">Updating this immediately recalculates your daily timetable on the Routine tab.</p>
-          </div>
-
           <!-- Sprint Start Date Card -->
           <div class="st-card">
             <h4>Program Sprint Start Date</h4>
@@ -485,20 +472,6 @@
             </div>
             <p class="st-hint">${targetCountdownHtml || "Enter the date of your upcoming ICPC Regional or on-site round."}</p>
           </div>
-
-          <!-- Time-Box Caps Card -->
-          <div class="st-card">
-            <h4>Time-Box Problem Caps</h4>
-            <p class="st-card-sub">Ground rule limits during training: cap individual problem time before checking hints.</p>
-            <div class="st-grid-2" style="margin-top:0.5rem">
-              <label class="st-field">Soft hint cap (minutes)
-                <input type="number" class="st-input" id="stSoftCap" min="15" max="120" step="5" value="${softCap}">
-              </label>
-              <label class="st-field">Hard cap / Editorial (minutes)
-                <input type="number" class="st-input" id="stHardCap" min="30" max="180" step="5" value="${hardCap}">
-              </label>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -508,7 +481,7 @@
           <div class="st-section-title">
             <span class="st-section-icon">🥋</span>
             <div>
-              <h3>Your Routine Type</h3>
+              <h3>Training Strategy &amp; Routine Type</h3>
               <p>Choose your training strategy. The Routine schedule will adapt its study pools, targets, and breaks accordingly.</p>
             </div>
           </div>
@@ -555,23 +528,95 @@
         </div>
       </section>
 
-      <!-- ================= SECTION 4: RECOMMENDATIONS & PREFERENCES ================= -->
-      <section class="doc-section st-section">
+      <!-- ================= SECTION 4: PASSWORD ================= -->
+      <section class="doc-section st-section" id="stSectionPassword">
         <div class="st-section-head">
           <div class="st-section-title">
-            <span class="st-section-icon">💡</span>
+            <span class="st-section-icon">🔐</span>
             <div>
-              <h3>Recommendations &amp; Customization</h3>
-              <p>Smart productivity tools, sound alerts, daily problem targets, and full backup management.</p>
+              <h3>Password</h3>
+              <p>Manage your account security and update your login password.</p>
+            </div>
+          </div>
+        </div>
+
+        ${user && !isOffline ? `
+          <div class="st-card" style="max-width:44rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.85rem">
+              <div>
+                <h4 style="margin:0">Change Account Password</h4>
+                <p class="st-card-sub" style="margin-top:0.2rem">Signed in as <b>${esc(user.email)}</b></p>
+              </div>
+              <span class="st-tag" style="background:var(--accent-soft);color:var(--accent-ink)">Cloud Account Active</span>
+            </div>
+
+            <form class="st-form pf-pass" id="stPassForm" novalidate style="max-width:100%">
+              <div class="st-grid-2" style="width:100%">
+                <label class="st-field">New password
+                  <input type="password" class="st-input" id="stPass" autocomplete="new-password" placeholder="At least 6 characters" required>
+                </label>
+                <label class="st-field">Repeat it
+                  <input type="password" class="st-input" id="stPass2" autocomplete="new-password" placeholder="Same again" required>
+                </label>
+              </div>
+              <div class="st-actions" style="margin-top:0.5rem">
+                <button type="submit" class="btn primary" id="stPassBtn">Change password</button>
+                <p class="auth-msg" id="stPassMsg" role="alert" style="margin:0"></p>
+              </div>
+            </form>
+          </div>
+        ` : `
+          <div class="st-card" style="max-width:44rem">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.6rem">
+              <div>
+                <h4 style="margin:0">Local / Guest Mode</h4>
+                <p class="st-card-sub" style="margin-top:0.2rem">Progress is saved locally in this browser.</p>
+              </div>
+              <span class="st-tag">Local Storage</span>
+            </div>
+            <p style="font-size:0.85rem;color:var(--ink-soft);line-height:1.5;margin:0.25rem 0 0.85rem">
+              You are currently using the tracker in local browser mode without a Supabase cloud account. Your data is stored safely in your browser. To password-protect your progress and sync seamlessly across devices, sign in or register with a Google account.
+            </p>
+            <div class="st-actions">
+              <button type="button" class="btn primary" id="stSignInBtn">Sign In or Create Account</button>
+            </div>
+          </div>
+        `}
+      </section>
+
+      <!-- ================= SECTION 5: PREFERENCES ================= -->
+      <section class="doc-section st-section" id="stSectionPreferences">
+        <div class="st-section-head">
+          <div class="st-section-title">
+            <span class="st-section-icon">⚙️</span>
+            <div>
+              <h3>Preferences</h3>
+              <p>Daily training schedule anchor, appearance theme, audio alerts, daily targets, and problem time caps.</p>
             </div>
           </div>
         </div>
 
         <div class="st-card-grid">
-          <!-- Theme Card -->
+          <!-- Start of Training Day Card -->
+          <div class="st-card">
+            <h4>Start of Training Day</h4>
+            <p class="st-card-sub">Both Routine schedules are laid out from this time. Contest Day still anchors to the real contest — this sets when the warm-up and curriculum blocks before it begin.</p>
+            <div class="st-time-box">
+              <input type="time" class="st-input st-time-input day-start-input" id="stDayStart" step="900" value="${esc(dayStartHHMM)}">
+              <div class="st-presets">
+                <button type="button" class="st-chip-btn" data-time="05:00">05:00 Early Bird</button>
+                <button type="button" class="st-chip-btn" data-time="06:00">06:00 Standard</button>
+                <button type="button" class="st-chip-btn" data-time="07:00">07:00 Balanced</button>
+                <button type="button" class="st-chip-btn" data-time="08:30">08:30 Night Owl</button>
+              </div>
+            </div>
+            <p class="st-hint">Updating this immediately recalculates your daily timetable on the Routine tab.</p>
+          </div>
+
+          <!-- Appearance & Theme Card -->
           <div class="st-card">
             <h4>Appearance &amp; Theme</h4>
-            <p class="st-card-sub">Select your preferred color scheme.</p>
+            <p class="st-card-sub">Select your preferred color scheme across all views.</p>
             <div class="btn-row" style="margin-top:0.75rem">
               <button type="button" class="btn st-theme-opt${currentTheme === "auto" ? " primary" : ""}" data-theme="auto">🌗 Auto (System)</button>
               <button type="button" class="btn st-theme-opt${currentTheme === "light" ? " primary" : ""}" data-theme="light">☀️ Light</button>
@@ -582,7 +627,7 @@
           <!-- Daily Problem Goal -->
           <div class="st-card">
             <h4>Daily Problem Goal</h4>
-            <p class="st-card-sub">Keep yourself accountable with a daily problem target.</p>
+            <p class="st-card-sub">Keep yourself accountable with a daily problem solve target.</p>
             <div class="btn-row" style="margin-top:0.75rem">
               ${[3, 5, 8, 10].map(n => `
                 <button type="button" class="btn st-goal-btn${dailyTarget === n ? " primary" : ""}" data-goal="${n}">${n} problems / day</button>
@@ -590,7 +635,7 @@
             </div>
           </div>
 
-          <!-- Sound Alerts -->
+          <!-- Timer & Sound Alerts -->
           <div class="st-card">
             <h4>Timer &amp; Sound Alerts</h4>
             <p class="st-card-sub">Chime on problem timer completion and landmark events.</p>
@@ -602,14 +647,65 @@
             </div>
           </div>
 
+          <!-- Time-Box Caps Card -->
+          <div class="st-card">
+            <h4>Time-Box Problem Caps</h4>
+            <p class="st-card-sub">Ground rule limits during training: cap individual problem time before checking hints.</p>
+            <div class="st-grid-2" style="margin-top:0.5rem">
+              <label class="st-field">Soft hint cap (minutes)
+                <input type="number" class="st-input" id="stSoftCap" min="15" max="120" step="5" value="${softCap}">
+              </label>
+              <label class="st-field">Hard cap / Editorial (minutes)
+                <input type="number" class="st-input" id="stHardCap" min="30" max="180" step="5" value="${hardCap}">
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 6: YOUR DATA ================= -->
+      <section class="doc-section st-section" id="stSectionYourData">
+        <div class="st-section-head">
+          <div class="st-section-title">
+            <span class="st-section-icon">💾</span>
+            <div>
+              <h3>Your data</h3>
+              <p>Progress is stored against your account, so signing in on another device brings it with you. Export or import your progress, full backups, or reset your data.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="st-card-grid">
+          <!-- Checklist Progress Export / Import -->
+          <div class="st-card">
+            <h4>Progress Data (Checklist &amp; Solves)</h4>
+            <p class="st-card-sub">Export or import your solved problems and checklist history. These export and import the same JSON format the Checklist uses.</p>
+            <div class="btn-row" style="margin-top:0.75rem">
+              <button type="button" class="btn primary" id="stExportProgressBtn">Export Progress (.json)</button>
+              <button type="button" class="btn" id="stImportProgressBtn">Import Progress</button>
+              <input type="file" id="stProgressFileInput" accept="application/json" style="display:none">
+            </div>
+            <p class="st-hint">Generates <code>icpc-progress-YYYY-MM-DD.json</code> containing all solved problem IDs.</p>
+          </div>
+
           <!-- All-in-One Backup -->
           <div class="st-card">
-            <h4>All-in-One Data Backup &amp; Sync</h4>
+            <h4>All-in-One Full Backup &amp; Sync</h4>
             <p class="st-card-sub">Export everything (solved checklist, flagged questions, templates, profile &amp; settings) into one JSON file.</p>
             <div class="btn-row" style="margin-top:0.75rem">
               <button type="button" class="btn primary" id="stExportAllBtn">Export Full Backup (.json)</button>
               <button type="button" class="btn" id="stImportAllBtn">Import Backup</button>
               <input type="file" id="stImportFileInput" accept="application/json" style="display:none">
+            </div>
+            <p class="st-hint">Complete snapshot across all tabs, custom notes, and settings.</p>
+          </div>
+
+          <!-- Danger Zone: Reset All Progress -->
+          <div class="st-card st-danger-card" style="border-color:color-mix(in srgb, var(--bad,#ef4444) 35%, var(--line));">
+            <h4 style="color:var(--bad,#ef4444)">Reset All Progress</h4>
+            <p class="st-card-sub">Reset all solved problem history, daily solve dates, and flagged revision lists. This action is irreversible unless you exported a backup first.</p>
+            <div class="btn-row" style="margin-top:0.75rem">
+              <button type="button" class="btn danger" id="stResetAllBtn">Reset All Progress</button>
             </div>
           </div>
         </div>
@@ -690,7 +786,7 @@
       });
     }
 
-    // 2. Day start presets
+    // 2. Day start presets and input
     host.querySelectorAll(".st-chip-btn[data-time]").forEach(btn => {
       btn.addEventListener("click", () => {
         const t = btn.dataset.time;
@@ -704,6 +800,19 @@
         }
       });
     });
+
+    const dayStartInp = document.getElementById("stDayStart");
+    if (dayStartInp) {
+      dayStartInp.addEventListener("change", () => {
+        const t = dayStartInp.value;
+        const m = /^(\d{1,2}):(\d{2})$/.exec(t);
+        if (m && window.ICPCRoutine) {
+          const mins = parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+          window.ICPCRoutine.setDayStart(mins);
+          showToast(`Start of training day set to ${t}`);
+        }
+      });
+    }
 
     // 3. Sprint Start Date
     const startInp = document.getElementById("stStartDate");
@@ -958,6 +1067,140 @@
           }
         };
         reader.readAsText(file);
+      });
+    }
+
+    // 13. Password Change & Auth Gate
+    const passForm = document.getElementById("stPassForm");
+    if (passForm) {
+      if (window.ICPCAccount && typeof window.ICPCAccount.addPasswordToggles === "function") {
+        window.ICPCAccount.addPasswordToggles(passForm);
+      }
+      passForm.addEventListener("submit", async e => {
+        e.preventDefault();
+        const a = (document.getElementById("stPass").value || "").trim();
+        const b = (document.getElementById("stPass2").value || "").trim();
+        const m = document.getElementById("stPassMsg");
+        const btn = document.getElementById("stPassBtn");
+        m.className = "auth-msg";
+        if (a.length < 6) {
+          m.className = "auth-msg err";
+          m.textContent = "At least 6 characters.";
+          return;
+        }
+        if (a !== b) {
+          m.className = "auth-msg err";
+          m.textContent = "Those two don't match.";
+          return;
+        }
+        btn.disabled = true;
+        btn.textContent = "Saving…";
+        try {
+          if (window.ICPCAccount && typeof window.ICPCAccount.changePassword === "function") {
+            await window.ICPCAccount.changePassword(a);
+          } else {
+            throw new Error("Password change is only available when signed in.");
+          }
+          m.className = "auth-msg ok";
+          m.textContent = "Password changed successfully.";
+          document.getElementById("stPass").value = "";
+          document.getElementById("stPass2").value = "";
+          showToast("Password updated successfully!");
+        } catch (err) {
+          m.className = "auth-msg err";
+          m.textContent = (err && err.message) || "Could not update password.";
+        }
+        btn.disabled = false;
+        btn.textContent = "Change password";
+      });
+    }
+
+    const signInBtn = document.getElementById("stSignInBtn");
+    if (signInBtn) {
+      signInBtn.addEventListener("click", () => {
+        if (window.ICPCAccount && typeof window.ICPCAccount.openAuthModal === "function") {
+          window.ICPCAccount.openAuthModal();
+        }
+      });
+    }
+
+    // 14. Progress Data (Checklist) Export
+    const exportProgBtn = document.getElementById("stExportProgressBtn");
+    if (exportProgBtn) {
+      exportProgBtn.addEventListener("click", () => {
+        const solved = window.ICPCProgress ? window.ICPCProgress.snapshot() : [];
+        const flags = window.ICPCProgress ? window.ICPCProgress.flagSnapshot() : [];
+        const payload = {
+          exportedAt: new Date().toISOString(),
+          solved: solved,
+          flagged: flags,
+          startDate: localStorage.getItem("icpc_start_date") || null
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `icpc-progress-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        showToast("Progress exported (.json)!");
+      });
+    }
+
+    // 15. Progress Data (Checklist) Import
+    const importProgBtn = document.getElementById("stImportProgressBtn");
+    const importProgFile = document.getElementById("stProgressFileInput");
+    if (importProgBtn && importProgFile) {
+      importProgBtn.addEventListener("click", () => importProgFile.click());
+      importProgFile.addEventListener("change", e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          try {
+            const payload = JSON.parse(ev.target.result);
+            if (Array.isArray(payload.solved) && window.ICPCProgress) {
+              window.ICPCProgress.replaceAll(payload.solved, payload.flagged || []);
+              if (payload.startDate) {
+                localStorage.setItem("icpc_start_date", payload.startDate);
+              }
+              showToast(`Imported ${payload.solved.length} solved problems!`);
+              render();
+            } else {
+              showToast("Invalid progress file: 'solved' list missing.", true);
+            }
+          } catch (err) {
+            showToast("Failed to parse progress file: invalid JSON.", true);
+          }
+          e.target.value = "";
+        };
+        reader.readAsText(file);
+      });
+    }
+
+    // 16. Reset All Progress (Exclusively in Settings)
+    const resetAllBtn = document.getElementById("stResetAllBtn");
+    if (resetAllBtn) {
+      let armed = false, timer = null;
+      resetAllBtn.addEventListener("click", () => {
+        if (!armed) {
+          armed = true;
+          resetAllBtn.textContent = "Click again to confirm reset";
+          timer = setTimeout(() => {
+            armed = false;
+            resetAllBtn.textContent = "Reset All Progress";
+          }, 3500);
+        } else {
+          clearTimeout(timer);
+          armed = false;
+          resetAllBtn.textContent = "Reset All Progress";
+          if (window.ICPCProgress && window.ICPCProgress.resetAll) {
+            window.ICPCProgress.resetAll();
+          }
+          showToast("All progress and flags have been reset.");
+        }
       });
     }
   }

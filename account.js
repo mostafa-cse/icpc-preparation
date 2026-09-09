@@ -730,41 +730,7 @@
       '</section>' +
 
       '<section class="doc-section"><h2>By training block</h2><div class="pf-list">' + rows(bd.phases) + "</div></section>" +
-      '<section class="doc-section"><h2>By source file</h2><div class="pf-list">' + rows(bd.files) + "</div></section>" +
-
-      (offline || !user ? "" :
-        '<section class="doc-section"><h2>Password</h2>' +
-          '<form class="pf-pass" id="pfPassForm" novalidate>' +
-            '<label class="auth-field">New password' +
-              '<input type="password" id="pfPass" autocomplete="new-password" ' +
-                'placeholder="At least 6 characters"></label>' +
-            '<label class="auth-field">Repeat it' +
-              '<input type="password" id="pfPass2" autocomplete="new-password" ' +
-                'placeholder="Same again"></label>' +
-            '<button type="submit" class="btn" id="pfPassBtn">Change password</button>' +
-            '<p class="auth-msg" id="pfPassMsg" role="alert"></p>' +
-          "</form>" +
-        "</section>") +
-
-      '<section class="doc-section"><h2>Preferences</h2>' +
-        '<div class="pf-pref">' +
-          '<div class="pf-pref-text">' +
-            "<strong>Start of training day</strong>" +
-            "<span>Both Routine schedules are laid out from this time. Contest Day still anchors to the real contest — this sets when the warm-up and curriculum blocks before it begin.</span>" +
-          "</div>" +
-          '<input type="time" class="day-start-input" step="900" value="' +
-            esc(window.ICPCRoutine ? window.ICPCRoutine.dayStartHHMM() : "06:00") + '">' +
-        "</div>" +
-      "</section>" +
-
-      '<section class="doc-section"><h2>Your data</h2>' +
-        '<p>Progress is stored against your account, so signing in on another device brings it with you. ' +
-        'These export and import the same JSON the Checklist tab uses.</p>' +
-        '<div class="btn-row" style="margin-left:0">' +
-          '<button class="btn" id="pfExport" type="button">Export progress</button>' +
-          '<button class="btn" id="pfImport" type="button">Import progress</button>' +
-        "</div>" +
-      "</section>";
+      '<section class="doc-section"><h2>By source file</h2><div class="pf-list">' + rows(bd.files) + "</div></section>";
 
     addPasswordToggles(host);
 
@@ -782,33 +748,6 @@
       const tab = document.querySelector('.tab[data-tab="settings"]');
       if (tab) tab.click();
     });
-
-    const passForm = document.getElementById("pfPassForm");
-    if (passForm) passForm.addEventListener("submit", async e => {
-      e.preventDefault();
-      const a = document.getElementById("pfPass").value;
-      const b = document.getElementById("pfPass2").value;
-      const m = document.getElementById("pfPassMsg");
-      const btn = document.getElementById("pfPassBtn");
-      m.className = "auth-msg";
-      if (a.length < 6) { m.className = "auth-msg err"; m.textContent = "At least 6 characters."; return; }
-      if (a !== b) { m.className = "auth-msg err"; m.textContent = "Those two don't match."; return; }
-      btn.disabled = true; btn.textContent = "Saving…";
-      try {
-        const { error } = await sb.auth.updateUser({ password: a });
-        if (error) throw error;
-        m.className = "auth-msg ok";
-        m.textContent = "Password changed.";
-        document.getElementById("pfPass").value = "";
-        document.getElementById("pfPass2").value = "";
-      } catch (err) {
-        m.className = "auth-msg err";
-        m.textContent = friendly(err);
-      }
-      btn.disabled = false; btn.textContent = "Change password";
-    });
-    document.getElementById("pfExport").addEventListener("click", () => document.getElementById("exportBtn").click());
-    document.getElementById("pfImport").addEventListener("click", () => document.getElementById("importBtn").click());
   }
 
   async function signOut() {
@@ -937,6 +876,33 @@
     getSettings: () => settings,
     isOffline: () => offline,
     currentUser: () => user,
+    addPasswordToggles,
+    changePassword: async (newPassword) => {
+      if (!sb || !user) throw new Error("Not signed in to an account.");
+      const { error } = await sb.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      return true;
+    },
+    openAuthModal: () => {
+      if (document.getElementById("authScreen")) return;
+      buildGate();
+      const screen = document.getElementById("authScreen");
+      if (screen && !screen.querySelector(".auth-close-btn")) {
+        const closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "auth-close-btn";
+        closeBtn.innerHTML = "&times;";
+        closeBtn.title = "Close";
+        closeBtn.setAttribute("aria-label", "Close");
+        closeBtn.style.cssText = "position:absolute;top:0.75rem;right:0.9rem;background:none;border:none;font-size:1.6rem;cursor:pointer;color:var(--ink-soft);line-height:1;padding:0.25rem 0.5rem;border-radius:var(--r-sm);z-index:10;";
+        closeBtn.addEventListener("click", () => removeGate());
+        const card = screen.querySelector(".auth-card");
+        if (card) {
+          card.style.position = "relative";
+          card.appendChild(closeBtn);
+        }
+      }
+    },
   };
 
   // Profile summarises the checklist, which changes constantly on another tab.

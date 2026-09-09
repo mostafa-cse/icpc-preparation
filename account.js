@@ -187,12 +187,19 @@
       btn.textContent = mode === "signup" ? "Creating…" : "Signing in…";
       msg.className = "auth-msg";
       msg.textContent = "";
+      function triggerShake() {
+        form.classList.remove("auth-shake");
+        void form.offsetWidth;
+        form.classList.add("auth-shake");
+      }
+
       try {
         if (mode === "signup") {
           const bad = signupEmailProblem(email);
           if (bad) {
             msg.className = "auth-msg err";
             msg.textContent = bad;
+            triggerShake();
             btn.disabled = false;
             btn.textContent = "Create account";
             return;
@@ -216,6 +223,7 @@
       } catch (err) {
         msg.className = "auth-msg err";
         msg.textContent = friendly(err);
+        triggerShake();
         btn.disabled = false;
         btn.textContent = mode === "signup" ? "Create account" : "Sign in";
       }
@@ -284,13 +292,21 @@
     addPasswordToggles(el);
     const msg = document.getElementById("pwMsg");
     const btn = document.getElementById("pwBtn");
-    document.getElementById("pwForm").addEventListener("submit", async e => {
+    const pwForm = document.getElementById("pwForm");
+    function triggerPwShake() {
+      if (!pwForm) return;
+      pwForm.classList.remove("auth-shake");
+      void pwForm.offsetWidth;
+      pwForm.classList.add("auth-shake");
+    }
+
+    pwForm.addEventListener("submit", async e => {
       e.preventDefault();
       const a = document.getElementById("pwPass").value;
       const b = document.getElementById("pwPass2").value;
       msg.className = "auth-msg";
-      if (a.length < 6) { msg.className = "auth-msg err"; msg.textContent = "At least 6 characters."; return; }
-      if (a !== b) { msg.className = "auth-msg err"; msg.textContent = "Those two don't match."; return; }
+      if (a.length < 6) { msg.className = "auth-msg err"; msg.textContent = "At least 6 characters."; triggerPwShake(); return; }
+      if (a !== b) { msg.className = "auth-msg err"; msg.textContent = "Those two don't match."; triggerPwShake(); return; }
       btn.disabled = true; btn.textContent = "Saving…";
       try {
         const { error } = await sb.auth.updateUser({ password: a });
@@ -305,6 +321,7 @@
       } catch (err) {
         msg.className = "auth-msg err";
         msg.textContent = friendly(err);
+        triggerPwShake();
         btn.disabled = false; btn.textContent = "Save password";
       }
     });
@@ -327,7 +344,12 @@
 
   function removeGate() {
     const el = document.getElementById("authScreen");
-    if (el) el.remove();
+    if (!el) return;
+    if (el.classList.contains("auth-closing")) return;
+    el.classList.add("auth-closing");
+    setTimeout(() => {
+      if (el.parentNode) el.remove();
+    }, 240);
   }
 
   function openApp() {
@@ -1005,14 +1027,12 @@
         const closeBtn = document.createElement("button");
         closeBtn.type = "button";
         closeBtn.className = "auth-close-btn";
-        closeBtn.innerHTML = "&times;";
+        closeBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
         closeBtn.title = "Close";
         closeBtn.setAttribute("aria-label", "Close");
-        closeBtn.style.cssText = "position:absolute;top:0.75rem;right:0.9rem;background:none;border:none;font-size:1.6rem;cursor:pointer;color:var(--ink-soft);line-height:1;padding:0.25rem 0.5rem;border-radius:var(--r-sm);z-index:10;";
         closeBtn.addEventListener("click", () => removeGate());
         const card = screen.querySelector(".auth-card");
         if (card) {
-          card.style.position = "relative";
           card.appendChild(closeBtn);
         }
       }

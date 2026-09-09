@@ -502,38 +502,93 @@
           ${routineCardsHtml}
         </div>
 
-        <div class="st-card" style="margin-top:1.25rem">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap">
+        <div class="st-card st-plan-section-card">
+          <div class="st-plan-card-top">
             <div>
-              <h4>Target Plan Duration</h4>
-              <p class="st-card-sub">Select your target duration to complete all 5,089 problems. Maintained exclusively here in Settings.</p>
+              <h4 class="st-plan-main-title">Target Plan Duration</h4>
+              <p class="st-card-sub">Select your target roadmap pace to complete all 5,089 problems. Dynamically recalculates phase timelines, weekly loads, and daily solve quotas across the entire app.</p>
             </div>
-            <span class="st-tag" style="background:var(--accent-soft);color:var(--accent-ink)">Active Target: ${currentPlanWeeks} Weeks</span>
+            <div class="st-plan-active-status">
+              <span class="st-plan-status-dot"></span>
+              <span>Active Target: <b>${currentPlanWeeks} Weeks</b></span>
+            </div>
           </div>
 
-          <div class="st-plan-selector" style="margin-top:0.85rem">
-            <div class="st-plan-card${currentPlanWeeks === 16 ? " is-active" : ""}" data-plan-select="16">
+          <div class="st-plan-grid">
+            <div class="st-plan-card${currentPlanWeeks === 16 ? " is-active" : ""}" data-plan-select="16" role="button" tabindex="0" aria-label="16-Week Final Sprint">
               <div class="st-plan-card-head">
-                <span class="st-plan-badge">16 Weeks (4 Months)</span>
-                <span class="st-plan-tag">Intensive Sprint</span>
+                <div class="st-plan-radio-row">
+                  <div class="st-routine-radio"><i class="st-dot"></i></div>
+                  <span class="st-plan-badge-weeks">16 Weeks</span>
+                </div>
+                <span class="st-plan-tag-pace sprint">Intensive Sprint</span>
               </div>
-              <h5 style="margin:0.4rem 0 0.2rem;font-size:1.05rem">16-Week Final Sprint</h5>
-              <p style="font-size:0.84rem;color:var(--ink-soft);margin-bottom:0.75rem">Aggressive daily pace for imminent contest season (~45 solves/day). 2 weeks for major core blocks.</p>
-              <button type="button" class="btn st-plan-btn${currentPlanWeeks === 16 ? " primary" : ""}" data-weeks="16">
-                ${currentPlanWeeks === 16 ? "Active Target" : "Select 16-Week Target"}
-              </button>
+
+              <div class="st-plan-card-content">
+                <h5 class="st-plan-card-title">16-Week Final Sprint</h5>
+                <p class="st-plan-card-desc">High-velocity curriculum for imminent contest season. Fast topic rotation to maximize problem variety.</p>
+
+                <div class="st-plan-metrics">
+                  <div class="st-plan-metric">
+                    <span class="st-plan-metric-lbl">Daily Quota</span>
+                    <span class="st-plan-metric-val">~45 solves/day</span>
+                  </div>
+                  <div class="st-plan-metric">
+                    <span class="st-plan-metric-lbl">Core Blocks</span>
+                    <span class="st-plan-metric-val">2 wks / block</span>
+                  </div>
+                  <div class="st-plan-metric">
+                    <span class="st-plan-metric-lbl">Time Horizon</span>
+                    <span class="st-plan-metric-val">4 Months</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="st-plan-card-footer">
+                <button type="button" class="st-plan-btn${currentPlanWeeks === 16 ? " is-selected" : ""}" data-weeks="16">
+                  ${currentPlanWeeks === 16
+                    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg> Active Target'
+                    : 'Switch to 16-Week Target'}
+                </button>
+              </div>
             </div>
 
-            <div class="st-plan-card${currentPlanWeeks === 26 ? " is-active" : ""}" data-plan-select="26">
+            <div class="st-plan-card${currentPlanWeeks === 26 ? " is-active" : ""}" data-plan-select="26" role="button" tabindex="0" aria-label="26-Week Extended Preparation">
               <div class="st-plan-card-head">
-                <span class="st-plan-badge">26 Weeks (6 Months)</span>
-                <span class="st-plan-tag">Mastery Pace</span>
+                <div class="st-plan-radio-row">
+                  <div class="st-routine-radio"><i class="st-dot"></i></div>
+                  <span class="st-plan-badge-weeks">26 Weeks</span>
+                </div>
+                <span class="st-plan-tag-pace mastery">Mastery Pace</span>
               </div>
-              <h5 style="margin:0.4rem 0 0.2rem;font-size:1.05rem">26-Week Extended Preparation</h5>
-              <p style="font-size:0.84rem;color:var(--ink-soft);margin-bottom:0.75rem">Semester-long runway with comprehensive deep-dive time (~28 solves/day). 3 weeks for major core blocks.</p>
-              <button type="button" class="btn st-plan-btn${currentPlanWeeks === 26 ? " primary" : ""}" data-weeks="26">
-                ${currentPlanWeeks === 26 ? "Active Target" : "Select 26-Week Target"}
-              </button>
+
+              <div class="st-plan-card-content">
+                <h5 class="st-plan-card-title">26-Week Extended Preparation</h5>
+                <p class="st-plan-card-desc">Comprehensive semester-long runway. Gives thorough drilling time for advanced data structures & algorithms.</p>
+
+                <div class="st-plan-metrics">
+                  <div class="st-plan-metric">
+                    <span class="st-plan-metric-lbl">Daily Quota</span>
+                    <span class="st-plan-metric-val">~28 solves/day</span>
+                  </div>
+                  <div class="st-plan-metric">
+                    <span class="st-plan-metric-lbl">Core Blocks</span>
+                    <span class="st-plan-metric-val">3 wks / block</span>
+                  </div>
+                  <div class="st-plan-metric">
+                    <span class="st-plan-metric-lbl">Time Horizon</span>
+                    <span class="st-plan-metric-val">6 Months</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="st-plan-card-footer">
+                <button type="button" class="st-plan-btn${currentPlanWeeks === 26 ? " is-selected" : ""}" data-weeks="26">
+                  ${currentPlanWeeks === 26
+                    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg> Active Target'
+                    : 'Switch to 26-Week Target'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -950,6 +1005,13 @@
       card.addEventListener("click", () => {
         const weeks = parseInt(card.dataset.planSelect, 10);
         handlePlanSelect(weeks);
+      });
+      card.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          const weeks = parseInt(card.dataset.planSelect, 10);
+          handlePlanSelect(weeks);
+        }
       });
     });
 

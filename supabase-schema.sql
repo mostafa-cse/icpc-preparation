@@ -109,6 +109,11 @@ begin
   alter table public.profiles add column if not exists status_reason     text;
   alter table public.profiles add column if not exists status_changed_at timestamptz;
   alter table public.profiles add column if not exists status_changed_by uuid;
+  alter table public.profiles add column if not exists bio              text;
+  alter table public.profiles add column if not exists target_rating    text;
+  alter table public.profiles add column if not exists institution      text;
+  alter table public.profiles add column if not exists preferred_lang   text default 'C++20';
+  alter table public.profiles add column if not exists cp_accounts      jsonb not null default '{}'::jsonb;
 
   if not exists (select 1 from pg_constraint where conname = 'profiles_role_check') then
     alter table public.profiles
@@ -262,6 +267,13 @@ create table if not exists public.user_settings (
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now()
 );
+
+alter table public.user_settings add column if not exists routine_type          text not null default 'intense';
+alter table public.user_settings add column if not exists target_contest_date   date;
+alter table public.user_settings add column if not exists daily_problem_target  smallint not null default 5;
+alter table public.user_settings add column if not exists sound_enabled         boolean not null default true;
+alter table public.user_settings add column if not exists timebox_soft_min      smallint not null default 45;
+alter table public.user_settings add column if not exists timebox_hard_min      smallint not null default 60;
 
 comment on table public.user_settings is 'Per-user preferences; one row per account.';
 comment on column public.user_settings.clist_credentials is

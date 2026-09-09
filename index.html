@@ -4,37 +4,97 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ICPC Final Sprint — 16-Week Training Program</title>
-<link rel="stylesheet" href="styles.css?v=2537fac9">
+<link rel="stylesheet" href="styles.css?v=cc42bdf1">
 <script src="theme.js?v=8c68bc43"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script src="supabase-config.js?v=f64f5749"></script>
 </head>
 <body>
 
-<div class="app">
-  <header class="topbar">
-    <div class="brand">
+<header class="topbar cp-topbar">
+  <div class="cp-topbar-left">
+    <a href="#" class="brand cp-brand" id="cpBrandLink" title="ICPC Preparation Training Program">
       <span class="brand-mark">🏁</span>
-      <div class="brand-text">
-        <p class="eyebrow">Final-Sprint Training Program</p>
-        <h1>ICPC · <span data-plan-weeks>16</span>-Week Plan</h1>
+      <div class="cp-brand-text">
+        <div class="cp-brand-title-row">
+          <span class="cp-brand-name">ICPC <span class="cp-brand-accent">PREP</span></span>
+          <span class="cp-plan-pill" data-plan-weeks title="Plan Pace (Settings)">16w</span>
+        </div>
+        <span class="cp-brand-sub">Final-Sprint Training</span>
       </div>
-    </div>
-    <nav class="tabs" role="tablist">
-      <button class="tab active" data-tab="routine" type="button">Routine</button>
-      <button class="tab" data-tab="checklist" type="button">Checklist</button>
-      <button class="tab" data-tab="templates" type="button">Templates</button>
-      <button class="tab" data-tab="contests" type="button">Contests</button>
-      <button class="tab" data-tab="profile" type="button">Profile</button>
+    </a>
+
+    <div class="cp-nav-divider" aria-hidden="true"></div>
+
+    <nav class="tabs cp-tabs" role="tablist">
+      <button class="tab active" data-tab="dashboard" type="button"><span class="tab-key">1</span>Dashboard</button>
+      <button class="tab" data-tab="routine" type="button"><span class="tab-key">2</span>Routine</button>
+      <button class="tab" data-tab="checklist" type="button"><span class="tab-key">3</span>Checklist</button>
+      <button class="tab" data-tab="templates" type="button"><span class="tab-key">4</span>Templates</button>
+      <button class="tab" data-tab="contests" type="button"><span class="tab-key">5</span>Contests</button>
+      <button class="tab" data-tab="profile" type="button"><span class="tab-key">6</span>Profile</button>
+      <button class="tab" data-tab="settings" type="button"><span class="tab-key">7</span>Settings</button>
       <button class="tab" data-tab="admin" type="button" hidden>Admin</button>
     </nav>
-    <div class="account-bar" id="accountBar"></div>
-    <div class="today-strip" id="todayStrip"></div>
-  </header>
+  </div>
 
+  <!-- CP Grind HUD & Tools -->
+  <div class="cp-hud-tools">
+    <!-- Practice Timer HUD -->
+    <div class="cp-timer-pill" id="cpTopTimer" title="Problem Practice Timer (45m hint, 60m hard cap)">
+      <span class="cp-timer-icon">⏱️</span>
+      <span class="cp-timer-face mono" id="cpTimerFace">00:00</span>
+      <button type="button" class="cp-timer-btn" id="cpTimerToggle" title="Start/Pause Timer (t)">▶</button>
+      <button type="button" class="cp-timer-btn" id="cpTimerReset" title="Reset Timer (T)">↺</button>
+    </div>
+
+    <!-- Quick Random Next Unsolved Problem -->
+    <button type="button" class="cp-tool-btn cp-next-btn" id="cpNextProblemBtn" title="Jump to a random unsolved problem (n)">
+      <span class="cp-tool-icon">🎲</span>
+      <span class="cp-tool-label">Next Problem</span>
+    </button>
+
+    <!-- Active Phase Status & Popover Trigger -->
+    <div class="cp-phase-wrap">
+      <button type="button" class="cp-tool-btn cp-phase-btn" id="cpPhaseBtn" title="Current Training Block status & schedule popover">
+        <span class="cp-phase-dot"></span>
+        <span id="cpPhaseLabel">Block 1 · 19d left</span>
+        <span class="cp-chevron">▾</span>
+      </button>
+      <div class="cp-phase-dropdown" id="cpPhaseDropdown" style="display:none"></div>
+    </div>
+
+    <!-- Solved Counter Pill -->
+    <div class="cp-solved-pill" id="cpSolvedPill" title="Problems solved in curriculum">
+      <span class="cp-check-icon">✓</span>
+      <span class="mono" id="cpSolvedNum">0</span>
+      <span class="cp-solved-total mono">/ 5,089</span>
+    </div>
+
+    <!-- Zen / Focus Mode Toggle -->
+    <button type="button" class="cp-tool-btn cp-zen-btn" id="cpZenBtn" title="Toggle Fullscreen Focus / Zen mode (z) - Hides topbar">
+      <span>🧘</span>
+      <span class="cp-tool-label">Focus</span>
+    </button>
+
+    <div class="account-bar" id="accountBar"></div>
+  </div>
+</header>
+
+<!-- Floating Restore Button when Topbar is in Zen Mode -->
+<button type="button" class="zen-restore-btn" id="zenRestoreBtn" title="Exit Focus Mode (z or Esc)" aria-label="Exit Focus Mode">
+  <span>🧘</span> Exit Focus <kbd>z</kbd>
+</button>
+
+<div class="app">
   <main>
+    <!-- ======================= DASHBOARD PANEL ======================= -->
+    <section id="panel-dashboard" class="panel active">
+      <div id="dashboardBody"></div>
+    </section>
+
     <!-- ======================= ROUTINE PANEL ======================= -->
-    <section id="panel-routine" class="panel active">
+    <section id="panel-routine" class="panel">
       <div class="doc-col">
         <p class="lede">Six source files, <strong id="statTotalInline">5,089</strong> unique problems, one goal: walk into your ICPC contest having drilled every core pattern in this set at least once. This is a full-time program — 12–14 hours a day over <span data-plan-weeks>16</span> weeks (<span data-plan-months>4</span> months), structured so the hardest, highest-yield topics get the most runway.</p>
 
@@ -95,47 +155,70 @@
 
     <!-- ======================= CHECKLIST PANEL ======================= -->
     <section id="panel-checklist" class="panel">
-      <div class="dash">
-        <div class="dash-top">
-          <div>
-            <div class="big-num" id="dashBigNum">0 / 0</div>
-            <div class="big-label">Unique problems solved</div>
+      <!-- Hub View: 10 Training Tracks Directory -->
+      <div id="checklistHub" class="checklist-hub">
+        <div class="hub-hero">
+          <div class="hub-hero-main">
+            <span class="hub-kicker">CURRICULUM DIRECTORY</span>
+            <h2 class="hub-title">ICPC Training Tracks & Checklists</h2>
+            <p class="hub-desc">10 topic-focused training checklists spanning 5,089 curated ICPC problems. Select a checklist track to open its dedicated problem solving workspace.</p>
           </div>
-          <div class="bar-col">
-            <div class="bar"><i id="dashBigBar"></i></div>
-            <div class="legend">
-              <span><i style="background:var(--good)"></i>Solved</span>
-              <span><i style="background:var(--warn)"></i>Very Hard / Insane / deep-cut</span>
-              <span><i style="background:var(--good);opacity:.4"></i>Easy tier</span>
+          <div class="hub-summary-card">
+            <div class="hub-summary-kpis">
+              <div>
+                <span class="hub-kpi-val" id="hubSolvedCount">0 / 5,089</span>
+                <span class="hub-kpi-lbl">Total Solved</span>
+              </div>
+              <div>
+                <span class="hub-kpi-val" id="hubPercentSolved">0.0%</span>
+                <span class="hub-kpi-lbl">Completion</span>
+              </div>
             </div>
+            <div class="hub-summary-bar"><i id="hubOverallBar" style="width:0%"></i></div>
           </div>
         </div>
-        <div class="pace" id="paceBar"></div>
-        <div class="grid-tiles" id="phaseGrid"></div>
-        <div class="grid-tiles" id="fileGrid"></div>
-      </div>
 
-      <div class="filter-bar">
-        <input type="search" id="searchBox" placeholder="Search problem id, e.g. CSES-1082…" autocomplete="off">
-        <select id="fileSelect"><option value="">All files</option></select>
-        <select id="phaseSelect"><option value="">All blocks</option></select>
-        <label class="chk-label"><input type="checkbox" id="hideSolved"> Hide solved</label>
-        <label class="chk-label"><input type="checkbox" id="deepOnly"> Stretch-tier only</label>
-        <label class="chk-label"><input type="checkbox" id="flaggedOnly"> Flagged only <span id="flagCount" class="chk-count"></span></label>
-        <span class="key-hint">Right-click a problem to flag it · press <kbd>?</kbd> for shortcuts</span>
-        <div class="btn-row">
-          <button class="btn primary" id="nextBtn" type="button" title="Jump to a random unsolved problem in view (n)">Next problem →</button>
-          <button class="btn" id="expandAllBtn" type="button">Expand all</button>
-          <button class="btn" id="collapseAllBtn" type="button">Collapse all</button>
-          <button class="btn" id="exportBtn" type="button">Export progress</button>
-          <button class="btn" id="importBtn" type="button">Import progress</button>
-          <input type="file" id="importFile" accept="application/json" style="display:none">
-          <button class="btn danger" id="resetBtn" type="button">Reset all</button>
+        <div class="checklist-grid" id="checklistTrackGrid">
+          <!-- Dynamically populated with 10 training track cards -->
         </div>
       </div>
 
-      <div id="fileAccordions"></div>
-      <p class="empty-note" id="emptyNote" style="display:none">No problems match the current filters.</p>
+      <!-- Dedicated Separated Checklist Page -->
+      <div id="checklistDetail" class="checklist-detail" style="display:none">
+        <div class="checklist-breadcrumb-bar" id="checklistBreadcrumb">
+          <button type="button" class="btn-back-hub" id="checklistBackBtn" title="Back to All Checklists">
+            <span class="back-arrow">←</span> All Checklists
+          </button>
+          <div class="breadcrumb-separator">/</div>
+          <div class="active-track-info">
+            <span class="track-badge" id="activeTrackBadge">Track 1</span>
+            <h2 class="active-track-title" id="activeTrackTitle">Foundations & Toolkit</h2>
+            <span class="active-track-stats" id="activeTrackStats">0 / 0 solved</span>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <input type="search" id="searchBox" placeholder="Search problem id, e.g. CSES-1082…" autocomplete="off">
+          <select id="fileSelect"><option value="">All files</option></select>
+          <select id="phaseSelect"><option value="">All blocks</option></select>
+          <label class="chk-label"><input type="checkbox" id="hideSolved"> Hide solved</label>
+          <label class="chk-label"><input type="checkbox" id="deepOnly"> Stretch-tier only</label>
+          <label class="chk-label"><input type="checkbox" id="flaggedOnly"> Flagged only <span id="flagCount" class="chk-count"></span></label>
+          <span class="key-hint">Right-click a problem to flag it · press <kbd>?</kbd> for shortcuts</span>
+          <div class="btn-row">
+            <button class="btn primary" id="nextBtn" type="button" title="Jump to a random unsolved problem in view (n)">Next problem →</button>
+            <button class="btn" id="expandAllBtn" type="button">Expand all</button>
+            <button class="btn" id="collapseAllBtn" type="button">Collapse all</button>
+            <button class="btn" id="exportBtn" type="button">Export progress</button>
+            <button class="btn" id="importBtn" type="button">Import progress</button>
+            <input type="file" id="importFile" accept="application/json" style="display:none">
+            <button class="btn danger" id="resetBtn" type="button">Reset all</button>
+          </div>
+        </div>
+
+        <div id="fileAccordions"></div>
+        <p class="empty-note" id="emptyNote" style="display:none">No problems match the current filters.</p>
+      </div>
     </section>
 
     <!-- ======================= TEMPLATES PANEL ======================= -->
@@ -247,6 +330,11 @@
       <div id="profileBody"></div>
     </section>
 
+    <!-- ======================= SETTINGS PANEL ======================= -->
+    <section id="panel-settings" class="panel">
+      <div id="settingsBody"></div>
+    </section>
+
     <section id="panel-admin" class="panel">
       <div id="adminBody"></div>
     </section>
@@ -257,11 +345,12 @@
     <dl>
       <dt><kbd>/</kbd> or <kbd>s</kbd></dt><dd>Search problems</dd>
       <dt><kbd>Esc</kbd></dt><dd>Clear the search</dd>
-      <dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>Routine · Checklist · Templates · Contests · Profile</dd>
+      <dt><kbd>1</kbd>–<kbd>7</kbd></dt><dd>Dashboard · Routine · Checklist · Templates · Contests · Profile · Settings</dd>
       <dt><kbd>e</kbd> / <kbd>E</kbd></dt><dd>Expand / collapse all sections</dd>
       <dt><kbd>f</kbd></dt><dd>Toggle flagged-only</dd>
       <dt><kbd>n</kbd></dt><dd>Jump to a random unsolved problem in view</dd>
       <dt><kbd>t</kbd> / <kbd>T</kbd></dt><dd>Start-pause / reset the time-box timer</dd>
+      <dt><kbd>z</kbd></dt><dd>Toggle Focus / Zen mode (hide or show topbar)</dd>
       <dt><kbd>?</kbd></dt><dd>Show or hide this</dd>
     </dl>
     <p>Right-click or <kbd>Alt</kbd>+click a problem to flag it for revision.</p>
@@ -287,11 +376,13 @@
 
       <nav class="foot-col" aria-label="Sections">
         <h3>Program</h3>
+        <a href="#" data-goto-tab="dashboard">Dashboard</a>
         <a href="#" data-goto-tab="routine">Routine</a>
         <a href="#" data-goto-tab="checklist">Checklist</a>
         <a href="#" data-goto-tab="templates">Templates</a>
         <a href="#" data-goto-tab="contests">Contests</a>
         <a href="#" data-goto-tab="profile">Profile</a>
+        <a href="#" data-goto-tab="settings">Settings</a>
       </nav>
 
       <nav class="foot-col" aria-label="Contest platforms">
@@ -322,13 +413,15 @@
 
 <div id="printRoot" aria-hidden="true"></div>
 
-<script src="script.js?v=1d90d2f1"></script>
+<script src="script.js?v=95727ac8"></script>
 <script src="prayer.js?v=06919d6a"></script>
-<script src="routine.js?v=63ef8220"></script>
-<script src="timer.js?v=4905ac97"></script>
+<script src="routine.js?v=ab597c13"></script>
+<script src="timer.js?v=dc2ed1df"></script>
 <script src="templates.js?v=c2f46bc6"></script>
 <script src="contests.js?v=c5893920"></script>
-<script src="account.js?v=36d44954"></script>
+<script src="account.js?v=1f926831"></script>
+<script src="settings.js?v=f5a0f9b2"></script>
+<script src="dashboard.js?v=27ea0e31"></script>
 <script src="admin.js?v=cf427d89"></script>
 </body>
 </html>

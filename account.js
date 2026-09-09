@@ -398,6 +398,7 @@
     if (!sb || !user) return;
     const rows = [];
     const flags = [];
+    const dates = {};
     const PAGE = 1000;
     for (let from = 0; ; from += PAGE) {
       // `flagged` is selected defensively: a project that has not re-run
@@ -412,12 +413,13 @@
       data.forEach(r => {
         rows.push(r.problem_id);
         if (r.flagged) flags.push(r.problem_id);
+        if (r.solved_at) dates[r.problem_id] = r.solved_at.slice(0, 10);
       });
       if (data.length < PAGE) break;
     }
     lastSynced = new Set(rows);
     lastFlags = new Set(flags);
-    window.ICPCProgress.replaceAll(rows, flags);
+    window.ICPCProgress.replaceAll(rows, flags, dates);
   }
 
   // Diff against the last synced snapshot so a toggle costs one small request.
@@ -607,10 +609,21 @@
     const pct = total ? (100 * done / total) : 0;
     const bd = window.ICPCProgress.breakdown();
 
+    let localProf = {};
+    try {
+      localProf = JSON.parse(localStorage.getItem("icpc_profile_data") || "{}") || {};
+    } catch (e) {}
+
+    const displayName = (profile && profile.display_name) || localProf.displayName || (user ? user.email.split("@")[0] : "Competitor");
+    const avatarEmoji = (profile && profile.avatar_emoji) || localProf.avatarEmoji || "";
+    const bio = (profile && profile.bio) || localProf.bio || "";
+    const targetRating = (profile && profile.target_rating) || localProf.targetRating || "";
+    const accounts = (profile && profile.cp_accounts) || localProf.accounts || {};
+
     const who = offline || !user
-      ? { name: "Offline", email: "No account — progress is saved in this browser only", since: null }
+      ? { name: displayName, email: "No account — progress is saved in this browser only", since: null }
       : {
-          name: (profile && (profile.display_name || profile.handle)) || user.email.split("@")[0],
+          name: displayName,
           email: user.email,
           since: (profile && profile.created_at) || user.created_at,
         };
@@ -625,17 +638,61 @@
       "</div>";
     }).join("");
 
+    // Build CP accounts badges
+    const cpPlats = [
+      { id: "codeforces", name: "Codeforces", badge: "CF", color: "#1f8acb", url: h => "https://codeforces.com/profile/" + encodeURIComponent(h) },
+      { id: "leetcode", name: "LeetCode", badge: "LC", color: "#ffa116", url: h => "https://leetcode.com/u/" + encodeURIComponent(h) },
+      { id: "atcoder", name: "AtCoder", badge: "AC", color: "#64748b", url: h => "https://atcoder.jp/users/" + encodeURIComponent(h) },
+      { id: "codechef", name: "CodeChef", badge: "CC", color: "#d97706", url: h => "https://www.codechef.com/users/" + encodeURIComponent(h) },
+      { id: "vjudge", name: "VJudge", badge: "VJ", color: "#0284c7", url: h => "https://vjudge.net/user/" + encodeURIComponent(h) },
+      { id: "cses", name: "CSES", badge: "CS", color: "#10b981", url: h => "https://cses.fi/user/" + encodeURIComponent(h) },
+      { id: "hackerrank", name: "HackerRank", badge: "HR", color: "#059669", url: h => "https://www.hackerrank.com/" + encodeURIComponent(h) },
+      { id: "github", name: "GitHub", badge: "GH", color: "#6366f1", url: h => "https://github.com/" + encodeURIComponent(h) },
+    ];
+
+    const activeCpList = cpPlats.filter(p => accounts[p.id] && accounts[p.id].trim());
+    const cpBadgesHtml = activeCpList.length
+      ? '<div class="pf-cp-grid">' +
+          activeCpList.map(p =>
+            '<a href="' + esc(p.url(accounts[p.id].trim())) + '" target="_blank" rel="noopener noreferrer" class="pf-cp-card">' +
+              '<span class="pf-cp-badge" style="background:' + p.color + ';color:#fff">' + esc(p.badge) + '</span>' +
+              '<div class="pf-cp-info">' +
+                '<span class="pf-cp-platform">' + esc(p.name) + '</span>' +
+                '<span class="pf-cp-handle">' + esc(accounts[p.id].trim()) + '</span>' +
+              '</div>' +
+              '<span class="pf-cp-arrow">↗</span>' +
+            '</a>'
+          ).join("") +
+        '</div>'
+      : '<p class="pf-empty-note">No CP accounts saved yet — <button type="button" class="rt-linkbtn" id="pfLinkCpBtn">link your accounts in Settings →</button></p>';
+
+    // Routine & Milestones card
+    const routinePreset = window.ICPCRoutine ? window.ICPCRoutine.currentPreset() : { name: "Intense ICPC Sprint", tagline: "12–14h/day" };
+    const dayStartHHMM = window.ICPCRoutine ? window.ICPCRoutine.dayStartHHMM() : "06:00";
+    const startDate = localStorage.getItem("icpc_start_date") || new Date().toISOString().slice(0, 10);
+    const targetDate = localStorage.getItem("icpc_target_date") || "";
+    let targetMsg = "";
+    if (targetDate) {
+      const diff = Math.ceil((new Date(targetDate + "T00:00:00") - new Date(new Date().toDateString())) / 86400000);
+      targetMsg = diff > 0 ? diff + " days until Target Contest" : diff === 0 ? "Contest is TODAY!" : "Contest passed";
+    }
+
     host.innerHTML =
       '<div class="pf-head">' +
-        '<span class="pf-avatar">' + esc(who.name.slice(0, 1).toUpperCase()) + "</span>" +
+        '<span class="pf-avatar">' + (avatarEmoji ? esc(avatarEmoji) : esc(who.name.slice(0, 1).toUpperCase())) + "</span>" +
         '<div class="pf-id">' +
           "<h2>" + esc(who.name) + "</h2>" +
+          (bio ? '<p class="pf-bio">' + esc(bio) + "</p>" : "") +
           '<p class="pf-email">' + esc(who.email) + "</p>" +
+          (targetRating ? '<p class="pf-target-badge">🎯 ' + esc(targetRating) + '</p>' : "") +
           (who.since ? '<p class="pf-since">Member since ' +
             esc(new Date(who.since).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })) +
             "</p>" : "") +
         "</div>" +
-        (offline || !user ? "" : '<button class="btn danger" id="signOutBtn" type="button">Sign out</button>') +
+        '<div class="pf-head-actions">' +
+          '<button class="btn" id="pfSettingsBtn" type="button">⚙️ Settings</button>' +
+          (offline || !user ? "" : '<button class="btn danger" id="signOutBtn" type="button">Sign out</button>') +
+        "</div>" +
       "</div>" +
 
       '<div class="stat-row">' +
@@ -645,6 +702,32 @@
         '<div class="stat"><span class="num">' + bd.phases.filter(p => p.done === p.total && p.total).length +
           '</span><span class="label">Blocks finished</span></div>' +
       "</div>" +
+
+      '<section class="doc-section"><h2>Competitive Programming Profiles</h2>' +
+        cpBadgesHtml +
+      '</section>' +
+
+      '<section class="doc-section"><h2>Training Program &amp; Schedule</h2>' +
+        '<div class="pf-routine-summary">' +
+          '<div class="pf-routine-item">' +
+            '<strong>Routine Strategy</strong>' +
+            '<span>' + esc(routinePreset.name) + ' (' + esc(routinePreset.tagline) + ')</span>' +
+          '</div>' +
+          '<div class="pf-routine-item">' +
+            '<strong>Training Day Start</strong>' +
+            '<span>' + esc(dayStartHHMM) + '</span>' +
+          '</div>' +
+          '<div class="pf-routine-item">' +
+            '<strong>Sprint Start Date</strong>' +
+            '<span>' + esc(startDate) + '</span>' +
+          '</div>' +
+          (targetDate ?
+            '<div class="pf-routine-item">' +
+              '<strong>Target Contest</strong>' +
+              '<span>' + esc(targetDate) + ' (' + esc(targetMsg) + ')</span>' +
+            '</div>' : "") +
+        '</div>' +
+      '</section>' +
 
       '<section class="doc-section"><h2>By training block</h2><div class="pf-list">' + rows(bd.phases) + "</div></section>" +
       '<section class="doc-section"><h2>By source file</h2><div class="pf-list">' + rows(bd.files) + "</div></section>" +
@@ -687,6 +770,18 @@
 
     const out = document.getElementById("signOutBtn");
     if (out) out.addEventListener("click", signOut);
+
+    const stBtn = document.getElementById("pfSettingsBtn");
+    if (stBtn) stBtn.addEventListener("click", () => {
+      const tab = document.querySelector('.tab[data-tab="settings"]');
+      if (tab) tab.click();
+    });
+
+    const linkCpBtn = document.getElementById("pfLinkCpBtn");
+    if (linkCpBtn) linkCpBtn.addEventListener("click", () => {
+      const tab = document.querySelector('.tab[data-tab="settings"]');
+      if (tab) tab.click();
+    });
 
     const passForm = document.getElementById("pfPassForm");
     if (passForm) passForm.addEventListener("submit", async e => {
@@ -820,9 +915,26 @@
     else buildGate();
   }
 
+  async function updateProfile(patch) {
+    profile = Object.assign(profile || {}, patch);
+    try {
+      localStorage.setItem("icpc_profile_cache", JSON.stringify(profile));
+      if (sb && user) {
+        await sb.from("profiles").update(patch).eq("id", user.id);
+      }
+    } catch (e) {
+      console.warn("Could not save profile to Supabase", e);
+    }
+    renderAccountBar();
+    renderProfile();
+  }
+
   window.ICPCAccount = {
     signOut,
     refreshProfile: renderProfile,
+    updateProfile,
+    getProfile: () => profile,
+    getSettings: () => settings,
     isOffline: () => offline,
     currentUser: () => user,
   };

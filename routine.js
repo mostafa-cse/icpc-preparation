@@ -31,8 +31,9 @@
 
   const STORE = "icpc_day_start";
   const PRAYER_STORE = "icpc_prayer_times";
+  const ROUTINE_STORE = "icpc_routine_type";
   const DEFAULT_START = 360;      // 06:00
-  const DAY_LENGTH = 1050;        // 17h30m awake, so sleep gets 6h30m
+  const DEFAULT_ROUTINE = "intense";
   const MIN_BLOCK = 30;           // never schedule a sliver of practice
   const PREP_MIN = 30;            // pre-contest reset, when there is room for one
   const POSTMORTEM_MIN = 90;      // starts the moment the contest ends
@@ -52,30 +53,118 @@
     SLEEP:      { label: "Sleep",       color: "#475569", target: null },
   };
 
-  // Poured into the gaps, in this order. Totals 12h, which is what is left of a
-  // 17h30m day once prayers, meals, warm-up and review are taken out.
-  const POOLS = [
-    { id: "theory",   category: "THEORY",   activity: "Theory &amp; template library", mins: 120,
-      note: "Read the day's sub-topic, extend your own snippets for it." },
-    { id: "prac1",    category: "PRACTICE", activity: "Curriculum practice", mins: 150,
-      note: "This week's block, checklist top to bottom: easy → normal → hard." },
-    { id: "prac2",    category: "PRACTICE", activity: "Curriculum practice", mins: 120,
-      note: "Keep going down the same section." },
-    { id: "prac3",    category: "PRACTICE", activity: "Curriculum practice", mins: 60,
-      note: "Finish the section or start the next tier." },
-    { id: "upsolve1", category: "UPSOLVE",  activity: "Upsolve / backlog", mins: 90,
-      note: "Anything unsolved from yesterday, or stuck >45 min today." },
-    { id: "upsolve2", category: "UPSOLVE",  activity: "Upsolve / backlog", mins: 60,
-      note: "Editorial allowed now — read it, close it, re-implement from blank." },
-    { id: "revision", category: "REVISION", activity: "Revision (flagged)", mins: 120,
-      note: "Re-solve what you flagged in earlier weeks. No hints." },
-  ];
-
-  // A contest costs roughly 3h45m of the day once prep and the post-mortem are
-  // counted, so the pools give that back rather than overflowing the evening.
-  const CONTEST_TRIM = { prac1: 90, prac3: 60, revision: 60, theory: 30 };
+  const ROUTINE_PRESETS = {
+    intense: {
+      id: "intense",
+      name: "Intense ICPC Sprint",
+      tagline: "12–14h/day · Full-time hardcore sprint",
+      desc: "Full-time program with 4 contest platforms, high-volume problem drills, and evening mocks.",
+      dayLength: 1050, // 17h30m awake, 6h30m sleep
+      targets: { THEORY: 120, PRACTICE: 330, UPSOLVE: 150, REVISION: 120 },
+      pools: [
+        { id: "theory",   category: "THEORY",   activity: "Theory &amp; template library", mins: 120,
+          note: "Read the day's sub-topic, extend your own snippets for it." },
+        { id: "prac1",    category: "PRACTICE", activity: "Curriculum practice", mins: 150,
+          note: "This week's block, checklist top to bottom: easy → normal → hard." },
+        { id: "prac2",    category: "PRACTICE", activity: "Curriculum practice", mins: 120,
+          note: "Keep going down the same section." },
+        { id: "prac3",    category: "PRACTICE", activity: "Curriculum practice", mins: 60,
+          note: "Finish the section or start the next tier." },
+        { id: "upsolve1", category: "UPSOLVE",  activity: "Upsolve / backlog", mins: 90,
+          note: "Anything unsolved from yesterday, or stuck >45 min today." },
+        { id: "upsolve2", category: "UPSOLVE",  activity: "Upsolve / backlog", mins: 60,
+          note: "Editorial allowed now — read it, close it, re-implement from blank." },
+        { id: "revision", category: "REVISION", activity: "Revision (flagged)", mins: 120,
+          note: "Re-solve what you flagged in earlier weeks. No hints." },
+      ],
+      trim: { prac1: 90, prac3: 60, revision: 60, theory: 30 }
+    },
+    balanced: {
+      id: "balanced",
+      name: "Balanced Student Prep",
+      tagline: "6–8h/day · Semester-sustainable",
+      desc: "Structured around classes and coursework. Focuses on high-yield curriculum patterns and weekend contests.",
+      dayLength: 960, // 16h awake, 8h sleep
+      targets: { THEORY: 90, PRACTICE: 180, UPSOLVE: 90, REVISION: 60 },
+      pools: [
+        { id: "theory",   category: "THEORY",   activity: "Theory &amp; key algorithms", mins: 90,
+          note: "Master one topic thoroughly and document its template." },
+        { id: "prac1",    category: "PRACTICE", activity: "Curriculum practice", mins: 120,
+          note: "Work through current block problems: Easy and Normal tiers." },
+        { id: "prac2",    category: "PRACTICE", activity: "Targeted problem drill", mins: 60,
+          note: "Solve 1-2 medium-hard problems independently without hints." },
+        { id: "upsolve1", category: "UPSOLVE",  activity: "Upsolve &amp; review", mins: 90,
+          note: "Recent contest mistakes, editorials, and flagged problems." },
+        { id: "revision", category: "REVISION", activity: "Revision &amp; flash drill", mins: 60,
+          note: "Re-solve previously flagged problems from earlier blocks." },
+      ],
+      trim: { prac1: 60, prac2: 30, revision: 30, theory: 20 }
+    },
+    contest: {
+      id: "contest",
+      name: "Contest & Upsolve Heavy",
+      tagline: "4–6h/day · Live rounds & editorial mastery",
+      desc: "Ideal for rapid rating climbers. Prioritizes virtual rounds, rapid upsolving, and editorial re-implementation.",
+      dayLength: 960,
+      targets: { THEORY: 45, PRACTICE: 120, UPSOLVE: 120, REVISION: 60 },
+      pools: [
+        { id: "theory",   category: "THEORY",   activity: "Quick theory review", mins: 45,
+          note: "Proof sketches, math identities, and edge case pitfalls." },
+        { id: "prac1",    category: "PRACTICE", activity: "Speed problem drill", mins: 120,
+          note: "Timed practice matching contest pacing and speed." },
+        { id: "upsolve1", category: "UPSOLVE",  activity: "Deep upsolving session", mins: 90,
+          note: "Unsolved problems from recent Codeforces/AtCoder rounds." },
+        { id: "upsolve2", category: "UPSOLVE",  activity: "Editorial code analysis", mins: 30,
+          note: "Compare your code against top master/grandmaster AC submissions." },
+        { id: "revision", category: "REVISION", activity: "Flagged problem redo", mins: 60,
+          note: "Re-solve mistakes from scratch without looking at solutions." },
+      ],
+      trim: { prac1: 60, revision: 30, theory: 20 }
+    },
+    mastery: {
+      id: "mastery",
+      name: "Topic Mastery & Deep Grinding",
+      tagline: "7–8h/day · Theory & structural depth",
+      desc: "Exhaustive deep-dive into complex data structures and advanced algorithms before moving forward.",
+      dayLength: 1000,
+      targets: { THEORY: 150, PRACTICE: 210, UPSOLVE: 60, REVISION: 60 },
+      pools: [
+        { id: "theory",   category: "THEORY",   activity: "Algorithmic theory & proofs", mins: 150,
+          note: "In-depth proof reading, blog tutorials, template crafting." },
+        { id: "prac1",    category: "PRACTICE", activity: "Topic problem set", mins: 120,
+          note: "Hand-picked problems reinforcing today's specific topic." },
+        { id: "prac2",    category: "PRACTICE", activity: "Challenging variations", mins: 90,
+          note: "Hard problems combining multiple advanced techniques." },
+        { id: "upsolve1", category: "UPSOLVE",  activity: "Upsolving &amp; notes", mins: 60,
+          note: "Document newly discovered tricks into your team notebook." },
+        { id: "revision", category: "REVISION", activity: "Template drill", mins: 60,
+          note: "Type standard algorithm templates from blank memory." },
+      ],
+      trim: { prac1: 60, prac2: 45, theory: 30 }
+    },
+    weekend: {
+      id: "weekend",
+      name: "Weekend Warrior",
+      tagline: "2–3h weekdays · 10–12h weekend mocks",
+      desc: "Light weekday drills for working competitors, paired with full 5-hour ICPC team simulation on weekends.",
+      dayLength: 900,
+      targets: { THEORY: 45, PRACTICE: 90, UPSOLVE: 45, REVISION: 30 },
+      pools: [
+        { id: "theory",   category: "THEORY",   activity: "Concise theory / warm-up", mins: 45,
+          note: "Daily micro-lesson, formula sheet or snippet review." },
+        { id: "prac1",    category: "PRACTICE", activity: "High-yield problem practice", mins: 90,
+          note: "2 focused problems in the current block." },
+        { id: "upsolve1", category: "UPSOLVE",  activity: "Upsolve checkpoint", mins: 45,
+          note: "Fix yesterday's WA/TLE submission." },
+        { id: "revision", category: "REVISION", activity: "Quick revision", mins: 30,
+          note: "Spaced repetition of previously flagged questions." },
+      ],
+      trim: { prac1: 45, theory: 15 }
+    }
+  };
 
   let dayStart = readStored();
+  let routineType = readRoutineType();
   let contests = [];        // every contest still ahead, across all platforms
   let calculated = null;    // today's astronomical times, or null while loading
   let overrides = readPrayerOverrides();
@@ -87,6 +176,27 @@
   function readStored() {
     const raw = parseInt(localStorage.getItem(STORE), 10);
     return Number.isFinite(raw) && raw >= 0 && raw <= 1439 ? raw : DEFAULT_START;
+  }
+
+  function readRoutineType() {
+    const raw = localStorage.getItem(ROUTINE_STORE);
+    return raw && ROUTINE_PRESETS[raw] ? raw : DEFAULT_ROUTINE;
+  }
+
+  function currentPreset() {
+    return ROUTINE_PRESETS[routineType] || ROUTINE_PRESETS.intense;
+  }
+
+  function dayLength() {
+    return currentPreset().dayLength || 1050;
+  }
+
+  function getPools() {
+    return currentPreset().pools.map(p => Object.assign({}, p));
+  }
+
+  function getTrim() {
+    return currentPreset().trim || {};
   }
 
   function readPrayerOverrides() {
@@ -220,7 +330,7 @@
 
   function layout() {
     const rows = [];
-    const end = dayStart + DAY_LENGTH;
+    const end = dayStart + dayLength();
     const p = prayer || {};
 
     // 1. The contests themselves — facts, pushed straight in. Post-mortems come
@@ -315,7 +425,7 @@
   // Every contest whose window overlaps today's training day. Two platforms can
   // land on the same date, so this is a list rather than a single round.
   function contestsToday() {
-    const end = dayStart + DAY_LENGTH;
+    const end = dayStart + dayLength();
     return contests
       .filter(c => c && c.start)
       .map(c => {
@@ -346,7 +456,7 @@
 
     const gaps = [];
     let cursor = dayStart;
-    const end = dayStart + DAY_LENGTH;
+    const end = dayStart + dayLength();
     merged.forEach(seg => {
       if (seg.from - cursor >= MIN_BLOCK) gaps.push({ from: cursor, to: seg.from });
       cursor = Math.max(cursor, seg.to);
@@ -389,11 +499,12 @@
     // Two contests in a day cost twice the time, so the trim scales with how
     // many actually landed rather than being a flat contest-day discount.
     const roundCount = fixed.filter(r => r.category === "CONTEST").length;
-    let pools = POOLS.map(p => Object.assign({}, p));
+    let pools = getPools();
+    const trim = getTrim();
     if (roundCount) {
       pools = pools
-        .map(p => CONTEST_TRIM[p.id]
-          ? Object.assign({}, p, { mins: p.mins - CONTEST_TRIM[p.id] * roundCount })
+        .map(p => trim[p.id]
+          ? Object.assign({}, p, { mins: p.mins - trim[p.id] * roundCount })
           : p)
         .filter(p => p.mins >= MIN_BLOCK);
     }
@@ -469,16 +580,18 @@
 
   function targetsHtml() {
     const t = totals();
+    const curTargets = currentPreset().targets || {};
     return Object.keys(CATEGORIES)
-      .filter(k => CATEGORIES[k].target)
+      .filter(k => curTargets[k])
       .map(k => {
         const c = CATEGORIES[k];
+        const target = curTargets[k];
         const got = t[k] || 0;
-        const pct = Math.min(100, Math.round(100 * got / c.target));
+        const pct = Math.min(100, Math.round(100 * got / target));
         return '<div class="rt-target">' +
           '<span class="rt-target-name" style="--cat:' + c.color + '">' + esc(c.label) + "</span>" +
           '<span class="rt-target-val mono">' + esc(dur(got)) +
-            ' <i>/ ' + esc(dur(c.target)) + "</i></span>" +
+            ' <i>/ ' + esc(dur(target)) + "</i></span>" +
           '<span class="bar"><i style="width:' + pct + '%;background:' + c.color + '"></i></span>' +
         "</div>";
       }).join("");
@@ -490,8 +603,9 @@
 
     const isContestDay = build();
     const now = nowMins();
-    const end = dayStart + DAY_LENGTH;
-    const elapsed = Math.min(100, Math.max(0, Math.round(100 * (fromDayStart(now) - dayStart) / DAY_LENGTH)));
+    const dLen = dayLength();
+    const end = dayStart + dLen;
+    const elapsed = Math.min(100, Math.max(0, Math.round(100 * (fromDayStart(now) - dayStart) / dLen)));
 
     const P = window.ICPCPrayer;
     const prayerStrip = !P || !prayer
@@ -520,6 +634,8 @@
             "Rebuilds itself when any of those change.</p>" +
         "</div>" +
         '<div class="rt-badges">' +
+          '<button type="button" class="rt-badge rt-type-pill" data-goto-tab="settings" title="Change routine type in Settings">' +
+            '⚙️ ' + esc(currentPreset().name) + '</button>' +
           (isContestDay
             ? '<span class="rt-badge is-contest">Contest day — auto-detected</span>'
             : '<span class="rt-badge">Practice day</span>') +
@@ -538,7 +654,8 @@
         '<label for="dayStartInput">My day starts at</label>' +
         '<input type="time" id="dayStartInput" class="day-start-input" step="900" value="' + hhmm(dayStart) + '">' +
         '<span class="daystart-note">Ends ' + esc(clock(end)) + " · " +
-          esc(dur(DAY_LENGTH)) + " awake, " + esc(dur(1440 - DAY_LENGTH)) + " sleep</span>" +
+          esc(dur(dLen)) + " awake, " + esc(dur(1440 - dLen)) + " sleep</span>" +
+        '<button type="button" class="rt-linkbtn" data-goto-tab="settings" style="margin-left:auto">Change in Settings →</button>' +
       "</div>" +
 
       '<div class="rt-targets"><h3>Today\'s targets</h3>' + targetsHtml() + "</div>" +
@@ -596,9 +713,21 @@
     }
   }
 
+  function setRoutineType(type, opts) {
+    if (!ROUTINE_PRESETS[type] || type === routineType) return;
+    routineType = type;
+    localStorage.setItem(ROUTINE_STORE, type);
+    render();
+    if (!(opts && opts.silent)) {
+      const sync = window.ICPCSettings && window.ICPCSettings.onChange;
+      if (typeof sync === "function") sync({ routine_type: type });
+    }
+  }
+
   document.addEventListener("icpc:settings", e => {
     const d = e.detail || {};
     if (d.day_start_min != null) setDayStart(d.day_start_min, { silent: true });
+    if (d.routine_type && ROUTINE_PRESETS[d.routine_type]) setRoutineType(d.routine_type, { silent: true });
     if (d.prayer_times && typeof d.prayer_times === "object") {
       overrides = d.prayer_times;
       localStorage.setItem(PRAYER_STORE, JSON.stringify(overrides));
@@ -625,6 +754,10 @@
 
   window.ICPCRoutine = {
     setDayStart,
+    setRoutineType,
+    routineType: () => routineType,
+    routinePresets: () => Object.assign({}, ROUTINE_PRESETS),
+    currentPreset: () => Object.assign({}, currentPreset()),
     setPrayer,
     clearPrayer,
     prayerTimes: () => Object.assign({}, prayer),

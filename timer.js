@@ -47,20 +47,48 @@
   function running() { return state.startedAt != null; }
 
   function paint() {
-    if (!el) return;
     const secs = elapsed();
-    face.textContent = fmt(secs);
-    el.classList.toggle("is-running", running());
-    el.classList.toggle("is-soft", secs >= SOFT_CAP && secs < HARD_CAP);
-    el.classList.toggle("is-hard", secs >= HARD_CAP);
-    const btn = el.querySelector(".tb-toggle");
-    btn.textContent = running() ? "Pause" : (secs ? "Resume" : "Start");
-    btn.setAttribute("aria-label", btn.textContent + " the time-box timer");
-    el.title = secs >= HARD_CAP
-      ? "Over the hour cap - read the editorial, close it, re-implement from blank"
-      : secs >= SOFT_CAP
-        ? "Past 45 minutes - the rule says a hint is allowed now"
-        : "Time on the current problem";
+    const formatted = fmt(secs);
+    const isRun = running();
+    const isSoft = secs >= SOFT_CAP && secs < HARD_CAP;
+    const isHard = secs >= HARD_CAP;
+
+    if (face) face.textContent = formatted;
+    if (el) {
+      el.classList.toggle("is-running", isRun);
+      el.classList.toggle("is-soft", isSoft);
+      el.classList.toggle("is-hard", isHard);
+      const btn = el.querySelector(".tb-toggle");
+      if (btn) {
+        btn.textContent = isRun ? "Pause" : (secs ? "Resume" : "Start");
+        btn.setAttribute("aria-label", btn.textContent + " the time-box timer");
+      }
+      el.title = isHard
+        ? "Over the hour cap - read the editorial, close it, re-implement from blank"
+        : isSoft
+          ? "Past 45 minutes - the rule says a hint is allowed now"
+          : "Time on the current problem";
+    }
+
+    // Sync with Topbar CP Timer HUD
+    const topTimer = document.getElementById("cpTopTimer");
+    const topFace = document.getElementById("cpTimerFace");
+    const topToggle = document.getElementById("cpTimerToggle");
+    if (topFace) topFace.textContent = formatted;
+    if (topToggle) {
+      topToggle.textContent = isRun ? "⏸" : "▶";
+      topToggle.title = isRun ? "Pause Timer (t)" : "Start Timer (t)";
+    }
+    if (topTimer) {
+      topTimer.classList.toggle("is-running", isRun);
+      topTimer.classList.toggle("is-soft", isSoft);
+      topTimer.classList.toggle("is-hard", isHard);
+      topTimer.title = isHard
+        ? "Hard Cap Reached (60m): Stop and read editorial!"
+        : isSoft
+          ? "Soft Cap (45m): Editorial hint permitted"
+          : `Problem Practice Timer: ${formatted} (Press 't' to toggle, 'T' to reset)`;
+    }
   }
 
   function start() {
@@ -89,18 +117,36 @@
   }
 
   function build() {
-    if (document.getElementById("timeBox")) return;
-    el = document.createElement("div");
-    el.id = "timeBox";
-    el.className = "timebox";
-    el.innerHTML =
-      '<span class="tb-face mono">00:00</span>' +
-      '<button type="button" class="tb-toggle">Start</button>' +
-      '<button type="button" class="tb-reset" aria-label="Reset the time-box timer">Reset</button>';
-    document.body.appendChild(el);
-    face = el.querySelector(".tb-face");
-    el.querySelector(".tb-toggle").addEventListener("click", toggle);
-    el.querySelector(".tb-reset").addEventListener("click", reset);
+    // Bind Topbar Timer controls
+    const topToggle = document.getElementById("cpTimerToggle");
+    const topReset = document.getElementById("cpTimerReset");
+    if (topToggle && !topToggle.dataset.timerBound) {
+      topToggle.dataset.timerBound = "1";
+      topToggle.addEventListener("click", toggle);
+    }
+    if (topReset && !topReset.dataset.timerBound) {
+      topReset.dataset.timerBound = "1";
+      topReset.addEventListener("click", reset);
+    }
+
+    // Floating corner box only if needed
+    if (!document.getElementById("timeBox")) {
+      el = document.createElement("div");
+      el.id = "timeBox";
+      el.className = "timebox";
+      el.innerHTML =
+        '<span class="tb-face mono">00:00</span>' +
+        '<button type="button" class="tb-toggle">Start</button>' +
+        '<button type="button" class="tb-reset" aria-label="Reset the time-box timer">Reset</button>';
+      document.body.appendChild(el);
+      face = el.querySelector(".tb-face");
+      el.querySelector(".tb-toggle").addEventListener("click", toggle);
+      el.querySelector(".tb-reset").addEventListener("click", reset);
+    } else {
+      el = document.getElementById("timeBox");
+      face = el.querySelector(".tb-face");
+    }
+
     paint(); loop();
   }
 

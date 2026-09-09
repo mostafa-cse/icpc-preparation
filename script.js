@@ -69,6 +69,30 @@
     return { total: w - 1, labels, weekToPhase };
   }
 
+  function getPhaseSchedule(totalWeeks, startDateStr) {
+    const spans = PLAN_SPANS[totalWeeks] || PLAN_SPANS[16];
+    const sDate = startDateStr ? new Date(startDateStr + "T00:00:00") : new Date();
+    let currentDayOffset = 0;
+    return PHASES.map((p, i) => {
+      const weeks = spans[i];
+      const days = weeks * 7;
+      const start = new Date(sDate.getTime() + currentDayOffset * 86400000);
+      const end = new Date(sDate.getTime() + (currentDayOffset + days - 1) * 86400000);
+      currentDayOffset += days;
+      return {
+        id: p.id,
+        name: p.name,
+        desc: p.desc,
+        src: p.src,
+        weeks,
+        startDate: start,
+        endDate: end,
+        startStr: start.toISOString().slice(0, 10),
+        endStr: end.toISOString().slice(0, 10),
+      };
+    });
+  }
+
   function readPlanWeeks() {
     const n = parseInt(localStorage.getItem(PLAN_STORE), 10);
     return PLAN_SPANS[n] ? n : 16;
@@ -131,18 +155,42 @@
   // the source of truth. account.js swaps this out on sign-in / sign-out.
   const CACHE_KEY = "icpc_solved";
   const FLAG_KEY = "icpc_flagged";
+  const DATES_KEY = "icpc_solve_dates";
   let solved = new Set();
   // Problems to come back to. The plan tells you to "revisit everything you
   // flagged" and to practise against "your own flagged list from weeks 1-14",
   // so this is the list it means. Independent of `solved`: the ones worth
   // revisiting are usually the ones you did solve, but only barely.
   let flagged = new Set();
+  let solveDates = {};
   try { solved = new Set(JSON.parse(localStorage.getItem(CACHE_KEY) || "[]")); } catch (e) {}
   try { flagged = new Set(JSON.parse(localStorage.getItem(FLAG_KEY) || "[]")); } catch (e) {}
+  try { solveDates = JSON.parse(localStorage.getItem(DATES_KEY) || "{}"); } catch (e) {}
+
+  // Gracefully ensure any already-solved problems have a date assigned for the heatmap
+  const todayIso = new Date().toISOString().slice(0, 10);
+  let datesBackfilled = false;
+  if (solved.size > 0) {
+    const solvedArr = [...solved];
+    const storedStart = localStorage.getItem("icpc_start_date") || todayIso;
+    const sTime = new Date(storedStart + "T00:00:00").getTime();
+    const nowTime = new Date().getTime();
+    solvedArr.forEach((id, idx) => {
+      if (!solveDates[id]) {
+        const itemTime = new Date(sTime + (idx / Math.max(1, solvedArr.length - 1)) * (nowTime - sTime));
+        solveDates[id] = itemTime.toISOString().slice(0, 10);
+        datesBackfilled = true;
+      }
+    });
+  }
+  if (datesBackfilled) {
+    try { localStorage.setItem(DATES_KEY, JSON.stringify(solveDates)); } catch (e) {}
+  }
 
   function persistLocal() {
     localStorage.setItem(CACHE_KEY, JSON.stringify([...solved]));
     localStorage.setItem(FLAG_KEY, JSON.stringify([...flagged]));
+    localStorage.setItem(DATES_KEY, JSON.stringify(solveDates));
   }
   function persist() {
     persistLocal();
@@ -233,11 +281,6 @@
     });
     blockList.querySelectorAll(".block-jump").forEach(btn => {
       btn.addEventListener("click", () => {
-        activateTab("checklist");
-        filters.phase = btn.dataset.phase;
-        document.getElementById("phaseSelect").value = filters.phase;
-        applyFilters();
-        expandMatching();
         window.scrollTo({ top: 0, behavior: "smooth" });
       });
     });
@@ -290,6 +333,8 @@
     renderBlocks();
     renderPace();
     updateFileAndSectionCounters();
+    renderTodayStrip();
+    document.dispatchEvent(new CustomEvent("icpc:progress_updated"));
   }
 
   function sectionMatchesFilters(sec) {
@@ -319,11 +364,10 @@
       const secs = allSections.filter(s => s._file === file && sectionMatchesFilters(s));
       const visibleSecs = [];
       secs.forEach(sec => {
-        const items = sec._items2.filter(itemMatchesFilters);
-        if (items.length === 0 && (filters.text || filters.hideSolved || filters.deepOnly || filters.flaggedOnly)) return;
-        visibleSecs.push({ sec, items: filters.text || filters.hideSolved || filters.deepOnly || filters.flaggedOnly ? items : sec._items2 });
+        const visItems = sec._items2.filter(itemMatchesFilters);
+        if (visItems.length) visibleSecs.push({ sec, items: visItems });
       });
-      if (visibleSecs.length === 0) return;
+      if (!visibleSecs.length) return;
       anySectionVisible = true;
 
       const fileIds = byFileIds[file];
@@ -398,11 +442,20 @@
         actions.className = "sec-actions";
         actions.innerHTML = `<button type="button" data-act="all">Mark section solved</button><button type="button" data-act="none">Clear section</button>`;
         actions.querySelector('[data-act="all"]').addEventListener("click", () => {
-          items.forEach(it => { solved.add(it.id); updateChipsForId(it.id); });
+          const nowIso = new Date().toISOString().slice(0, 10);
+          items.forEach(it => {
+            solved.add(it.id);
+            if (!solveDates[it.id]) solveDates[it.id] = nowIso;
+            updateChipsForId(it.id);
+          });
           persist(); refreshCounters();
         });
         actions.querySelector('[data-act="none"]').addEventListener("click", () => {
-          items.forEach(it => { solved.delete(it.id); updateChipsForId(it.id); });
+          items.forEach(it => {
+            solved.delete(it.id);
+            delete solveDates[it.id];
+            updateChipsForId(it.id);
+          });
           persist(); refreshCounters();
         });
         body.appendChild(actions);
@@ -425,7 +478,14 @@
             // Alt+click flags instead, for trackpads and anyone who would
             // rather not reach for the context menu.
             if (e.altKey) { toggleFlag(it.id); return; }
-            if (solved.has(it.id)) solved.delete(it.id); else solved.add(it.id);
+            const nowIso = new Date().toISOString().slice(0, 10);
+            if (solved.has(it.id)) {
+              solved.delete(it.id);
+              delete solveDates[it.id];
+            } else {
+              solved.add(it.id);
+              solveDates[it.id] = nowIso;
+            }
             persist();
             updateChipsForId(it.id);
             refreshCounters();
@@ -701,6 +761,7 @@
     renderBlocks();
     renderTodayStrip();
     renderPace();
+    document.dispatchEvent(new CustomEvent("icpc:plan_updated", { detail: { weeks } }));
     if (!(opts && opts.silent)) {
       const sync = window.ICPCSettings && window.ICPCSettings.onChange;
       if (typeof sync === "function") sync({ plan_weeks: weeks });
@@ -710,84 +771,233 @@
   document.addEventListener("icpc:settings", e => {
     const d = e.detail || {};
     if (d.plan_weeks) setPlanWeeks(d.plan_weeks, { silent: true });
+    if (d.start_date) {
+      localStorage.setItem("icpc_start_date", d.start_date);
+      renderTodayStrip();
+      renderPace();
+    }
   });
 
-  // ---------- Today strip ----------
-  const todayStrip = document.getElementById("todayStrip");
-  let startDateInput;
-  function renderTodayStrip() {
+  document.addEventListener("icpc:start_date_updated", e => {
+    renderTodayStrip();
+    renderPace();
+  });
+
+  document.addEventListener("icpc:set_plan_weeks", e => {
+    if (e.detail && (e.detail === 16 || e.detail === 26)) {
+      setPlanWeeks(e.detail);
+    }
+  });
+
+  // ---------- Redesigned CP Topbar Controller ----------
+  let cpPhaseDropdownOpen = false;
+
+  function renderCpTopBar() {
     const stored = localStorage.getItem("icpc_start_date");
     const startDate = stored ? new Date(stored + "T00:00:00") : new Date();
-    if (!stored) localStorage.setItem("icpc_start_date", startDate.toISOString().slice(0,10));
+    if (!stored) localStorage.setItem("icpc_start_date", startDate.toISOString().slice(0, 10));
     const now = new Date();
     const days = Math.floor((new Date(now.toDateString()) - new Date(startDate.toDateString())) / 86400000);
 
-    todayStrip.innerHTML = "";
-    let msg;
-    if (days < 0) {
-      msg = `<strong>Program starts in ${-days} day${-days === 1 ? "" : "s"}.</strong>`;
-    } else {
-      const week = Math.min(plan.total, Math.floor(days / 7) + 1);
-      const phase = PHASES[plan.weekToPhase[week]];
-      msg = `<strong>Week ${week} of ${plan.total}</strong> <span class="pill">Block ${phase.id + 1}: ${esc(phase.name)}</span>`;
+    const schedule = getPhaseSchedule(plan.total, stored || startDate.toISOString().slice(0, 10));
+    const totalProblems = allIds.size;
+    const solvedProblems = countSet(allIds);
+    const remainProblems = Math.max(0, totalProblems - solvedProblems);
+    const totalPlanDays = plan.total * 7;
+    const remainPlanDays = Math.max(0, totalPlanDays - days);
+
+    // Current week & active phase
+    const currentWeek = days < 0 ? 1 : Math.min(plan.total, Math.floor(days / 7) + 1);
+    const activePhaseIdx = (plan.weekToPhase && plan.weekToPhase[currentWeek] !== undefined)
+      ? plan.weekToPhase[currentWeek]
+      : 0;
+    const activePhase = PHASES[activePhaseIdx];
+    const activeSchedule = schedule[activePhaseIdx];
+
+    const fmtShort = d => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+    // Update Phase status label in Topbar
+    const phaseLabel = document.getElementById("cpPhaseLabel");
+    if (phaseLabel) {
+      if (days < 0) {
+        phaseLabel.textContent = `Starts in ${-days}d (${fmtShort(activeSchedule.startDate)})`;
+      } else {
+        const phaseDaysLeft = Math.max(0, Math.ceil((activeSchedule.endDate - now) / 86400000));
+        phaseLabel.textContent = `Block ${activePhase.id + 1} · ${phaseDaysLeft}d left`;
+      }
     }
-    todayStrip.insertAdjacentHTML("beforeend", `<span>${msg}</span>`);
 
-    // Same ten blocks, two paces. Switching re-labels every week range and
-    // moves "this week's block", but never touches what you have solved.
-    todayStrip.insertAdjacentHTML("beforeend",
-      `<span class="plan-switch" role="group" aria-label="Plan length">` +
-        Object.keys(PLAN_SPANS).map(n =>
-          `<button type="button" class="plan-opt${+n === plan.total ? " active" : ""}" data-plan="${n}">` +
-          `${n} wk<i>${Math.round(n / 4.345)} mo</i></button>`).join("") +
-      `</span>`);
-    todayStrip.querySelectorAll(".plan-opt").forEach(btn => btn.addEventListener("click", () => {
-      setPlanWeeks(parseInt(btn.dataset.plan, 10));
-    }));
+    // Update Solved Counter Pill
+    const solvedNum = document.getElementById("cpSolvedNum");
+    if (solvedNum) solvedNum.textContent = solvedProblems.toLocaleString();
+    const solvedPill = document.getElementById("cpSolvedPill");
+    if (solvedPill) {
+      solvedPill.title = `${solvedProblems.toLocaleString()} solved · ${remainProblems.toLocaleString()} remaining · ${remainPlanDays}d left in ${plan.total}-wk plan`;
+    }
 
-    todayStrip.insertAdjacentHTML("beforeend", `<label style="display:flex;align-items:center;gap:0.35rem">Start date <input type="date" id="startDateInput"></label>`);
-    startDateInput = document.getElementById("startDateInput");
-    startDateInput.value = localStorage.getItem("icpc_start_date");
-    startDateInput.addEventListener("change", () => {
-      localStorage.setItem("icpc_start_date", startDateInput.value);
-      renderTodayStrip();
-      renderPace();
+    // Populate Phase Dropdown Popover
+    const dropdown = document.getElementById("cpPhaseDropdown");
+    if (dropdown) {
+      dropdown.innerHTML = `
+        <div class="cp-dropdown-head">
+          <div class="cp-dd-title">
+            <strong>Training Schedule</strong>
+            <span class="cp-dd-sub">${plan.total}-Week Plan · ${remainPlanDays}d remaining</span>
+          </div>
+          <a href="#" data-goto-tab="settings" class="cp-dd-settings-link" title="Customize start date and duration in Settings">⚙️ Settings</a>
+        </div>
+        <div class="cp-dropdown-list">
+          ${PHASES.map(p => {
+            const s = schedule[p.id];
+            const d = countSet(byPhaseIds[p.id]);
+            const t = byPhaseIds[p.id].size;
+            const pct = t ? Math.round((100 * d) / t) : 0;
+            const isCur = p.id === activePhase.id;
+            return `
+              <div class="cp-dd-item${isCur ? " is-current" : ""}">
+                <div class="cp-dd-item-info">
+                  <div class="cp-dd-item-title">
+                    <span class="cp-dd-bnum">Block ${p.id + 1}</span>
+                    ${isCur ? '<span class="cp-dd-badge">Active</span>' : ''}
+                    <span class="cp-dd-name">${esc(p.name)}</span>
+                  </div>
+                  <div class="cp-dd-dates">📅 ${fmtShort(s.startDate)} – ${fmtShort(s.endDate)} · ${d}/${t} (${pct}%)</div>
+                  <div class="cp-dd-bar"><i style="width:${pct}%"></i></div>
+                </div>
+                <button type="button" class="cp-dd-jump-btn" data-jump-phase="${p.id}" title="Filter Checklist to Block ${p.id + 1}">Filter</button>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+
+      dropdown.querySelectorAll("[data-jump-phase]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          dropdown.style.display = "none";
+          cpPhaseDropdownOpen = false;
+          activateTab("checklist");
+          filters.phase = String(btn.dataset.jumpPhase);
+          const pSel = document.getElementById("phaseSelect");
+          if (pSel) pSel.value = filters.phase;
+          applyFilters();
+          expandMatching();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      });
+
+      dropdown.querySelectorAll("[data-goto-tab]").forEach(el => {
+        el.addEventListener("click", e => {
+          e.preventDefault();
+          dropdown.style.display = "none";
+          cpPhaseDropdownOpen = false;
+          activateTab(el.dataset.gotoTab);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      });
+    }
+  }
+  const renderTodayStrip = renderCpTopBar;
+
+  // Zen / Focus Mode toggle
+  function toggleZenMode(forceState) {
+    const isZen = typeof forceState === "boolean"
+      ? forceState
+      : !document.body.classList.contains("zen-mode");
+    document.body.classList.toggle("zen-mode", isZen);
+    localStorage.setItem("icpc_zen_mode", isZen ? "1" : "0");
+    const zenBtn = document.getElementById("cpZenBtn");
+    if (zenBtn) zenBtn.classList.toggle("is-active", isZen);
+    measureTopbar();
+  }
+
+  // Restore Zen mode if user previously had it enabled
+  if (localStorage.getItem("icpc_zen_mode") === "1") {
+    document.body.classList.add("zen-mode");
+  }
+
+  // Bind Topbar CP tools
+  const cpPhaseBtn = document.getElementById("cpPhaseBtn");
+  const cpPhaseDropdown = document.getElementById("cpPhaseDropdown");
+  if (cpPhaseBtn && cpPhaseDropdown) {
+    cpPhaseBtn.addEventListener("click", e => {
+      e.stopPropagation();
+      cpPhaseDropdownOpen = !cpPhaseDropdownOpen;
+      cpPhaseDropdown.style.display = cpPhaseDropdownOpen ? "block" : "none";
     });
-    const jumpBtn = document.createElement("button");
-    jumpBtn.type = "button"; jumpBtn.className = "link-btn"; jumpBtn.textContent = "Jump to this week's block →";
-    jumpBtn.addEventListener("click", () => {
-      const d = Math.max(0, days);
-      const week = Math.min(plan.total, Math.floor(d / 7) + 1);
-      const phase = PHASES[plan.weekToPhase[week]];
+    document.addEventListener("click", e => {
+      if (cpPhaseDropdownOpen && !cpPhaseDropdown.contains(e.target) && !cpPhaseBtn.contains(e.target)) {
+        cpPhaseDropdownOpen = false;
+        cpPhaseDropdown.style.display = "none";
+      }
+    });
+  }
+
+  const cpNextProblemBtn = document.getElementById("cpNextProblemBtn");
+  if (cpNextProblemBtn) {
+    cpNextProblemBtn.addEventListener("click", () => {
       activateTab("checklist");
-      filters.phase = String(phase.id);
-      phaseSelect.value = filters.phase;
-      applyFilters();
-      expandMatching();
+      const pick = pickNext();
+      const label = cpNextProblemBtn.querySelector(".cp-tool-label");
+      if (label) {
+        label.textContent = pick ? "Picked!" : "Done!";
+        setTimeout(() => { label.textContent = "Next"; }, 1500);
+      }
+    });
+  }
+
+  const cpZenBtn = document.getElementById("cpZenBtn");
+  if (cpZenBtn) {
+    cpZenBtn.addEventListener("click", () => toggleZenMode());
+  }
+
+  const zenRestoreBtn = document.getElementById("zenRestoreBtn");
+  if (zenRestoreBtn) {
+    zenRestoreBtn.addEventListener("click", () => toggleZenMode(false));
+  }
+
+  const cpBrandLink = document.getElementById("cpBrandLink");
+  if (cpBrandLink) {
+    cpBrandLink.addEventListener("click", e => {
+      e.preventDefault();
+      activateTab("dashboard");
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
-    todayStrip.appendChild(jumpBtn);
   }
 
   // ---------- Progress API (consumed by account.js for Supabase sync) ----------
   window.ICPCProgress = Object.assign(window.ICPCProgress || {}, {
     snapshot: () => [...solved],
     flagSnapshot: () => [...flagged],
+    dateSnapshot: () => Object.assign({}, solveDates),
     total: () => allIds.size,
     // Replace local state from the server without echoing back a write.
-    replaceAll(ids, flags) {
+    replaceAll(ids, flags, dates) {
       solved = new Set(ids || []);
       if (flags) flagged = new Set(flags);
+      if (dates && typeof dates === "object") {
+        solveDates = Object.assign({}, dates);
+      }
+      const nowIso = new Date().toISOString().slice(0, 10);
+      solved.forEach(id => {
+        if (!solveDates[id]) solveDates[id] = nowIso;
+      });
       persistLocal();
       refreshAllChipVisuals();
       refreshCounters();
+      document.dispatchEvent(new CustomEvent("icpc:progress_updated"));
     },
     clearLocal() {
       solved = new Set();
       flagged = new Set();
-      try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(FLAG_KEY); } catch (e) {}
+      solveDates = {};
+      try {
+        localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem(FLAG_KEY);
+        localStorage.removeItem(DATES_KEY);
+      } catch (e) {}
       refreshAllChipVisuals();
       refreshCounters();
+      document.dispatchEvent(new CustomEvent("icpc:progress_updated"));
     },
     // Per-block and per-file counts, for the profile page.
     breakdown() {
@@ -804,10 +1014,57 @@
     },
   });
 
+  // ---------- Plan & Data Global APIs ----------
+  window.ICPCPlan = {
+    getWeeks: () => plan.total,
+    setWeeks: (n, opts) => setPlanWeeks(n, opts),
+    spans: (total) => PLAN_SPANS[total] || PLAN_SPANS[16],
+    getSchedule: (total, startStr) => getPhaseSchedule(total || plan.total, startStr || localStorage.getItem("icpc_start_date")),
+  };
+
+  window.ICPCData = {
+    allIds: () => allIds,
+    solvedSet: () => solved,
+    flaggedSet: () => flagged,
+    solveDates: () => solveDates,
+    byPhaseIds: () => byPhaseIds,
+    byFileIds: () => byFileIds,
+    phases: () => PHASES,
+    files: () => FILES,
+    allSections: () => allSections,
+    countSet: countSet,
+    plan: () => plan,
+    linkFor: linkFor,
+    displayId: displayId,
+    activateTab: activateTab,
+    applyFilters: (phaseId, file) => {
+      if (phaseId !== undefined && phaseId !== null) {
+        filters.phase = String(phaseId);
+        const pSel = document.getElementById("phaseSelect");
+        if (pSel) pSel.value = filters.phase;
+      }
+      if (file !== undefined && file !== null) {
+        filters.file = file;
+        const fSel = document.getElementById("fileSelect");
+        if (fSel) fSel.value = filters.file;
+      }
+      applyFilters();
+      expandMatching();
+    }
+  };
+
   // ---------- Keyboard ----------
-  // 4,427 problems is a lot of mouse travel. These are the moves made dozens of
+  // 5,089 problems is a lot of mouse travel. These are the moves made dozens of
   // times a day: jump to a tab, get to the search box, clear it again.
-  const TAB_KEYS = { "1": "routine", "2": "checklist", "3": "templates", "4": "contests", "5": "profile" };
+  const TAB_KEYS = {
+    "1": "dashboard",
+    "2": "routine",
+    "3": "checklist",
+    "4": "templates",
+    "5": "contests",
+    "6": "profile",
+    "7": "settings"
+  };
 
   function typingInto(el) {
     if (!el) return false;
@@ -864,6 +1121,16 @@
       box.dispatchEvent(new Event("change"));
       return;
     }
+    if (e.key === "z" || e.key === "Z") {
+      e.preventDefault();
+      toggleZenMode();
+      return;
+    }
+    if (e.key === "Escape" && document.body.classList.contains("zen-mode")) {
+      e.preventDefault();
+      toggleZenMode(false);
+      return;
+    }
     if (e.key === "?") {
       e.preventDefault();
       const help = document.getElementById("keyHelp");
@@ -873,6 +1140,10 @@
 
   // Keep the sticky filter bar clear of the header at any width.
   function measureTopbar() {
+    if (document.body.classList.contains("zen-mode")) {
+      document.documentElement.style.setProperty("--topbar-h", "0px");
+      return;
+    }
     const bar = document.querySelector(".topbar");
     if (!bar) return;
     document.documentElement.style.setProperty("--topbar-h", bar.offsetHeight + "px");

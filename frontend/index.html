@@ -33,7 +33,7 @@
   });
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=c862b87c">
+<link rel="stylesheet" href="styles.css?v=672ab72a">
 <script src="theme.js?v=ddf538cb"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script src="supabase-config.js?v=57dadd8f"></script>
@@ -69,9 +69,7 @@
         <div class="fireplace__light"></div>
       </div>
     </div>
-    <div class="flame-badge">ICPC FINAL SPRINT</div>
-    <h2 class="flame-title">IGNITING WORKSPACE</h2>
-    <p class="flame-ticker" id="flameTicker">Compiling algorithmic training sets...</p>
+    <h2 class="flame-title">The Purest Future of Competitive Programmer</h2>
     <div class="flame-progress-track" aria-hidden="true">
       <div class="flame-progress-bar"></div>
     </div>
@@ -83,31 +81,9 @@
   var MIN_DISPLAY_MS = 2200;
   var dismissed = false;
 
-  var tips = [
-    "Compiling algorithmic training sets...",
-    "Igniting daily problem streak...",
-    "Analyzing time complexity O(N log N)...",
-    "Optimal substructure identified...",
-    "Synchronizing with ICPC archives..."
-  ];
-  var tipIdx = 0;
-  var tickerEl = document.getElementById("flameTicker");
-  var interval = setInterval(function() {
-    if (dismissed || !tickerEl) { clearInterval(interval); return; }
-    tipIdx = (tipIdx + 1) % tips.length;
-    tickerEl.style.opacity = "0";
-    setTimeout(function() {
-      if (tickerEl) {
-        tickerEl.textContent = tips[tipIdx];
-        tickerEl.style.opacity = "0.9";
-      }
-    }, 180);
-  }, 1050);
-
   window.dismissFlameLoader = function() {
     if (dismissed) return;
     dismissed = true;
-    clearInterval(interval);
     var elapsed = Date.now() - startTime;
     var delay = Math.max(0, MIN_DISPLAY_MS - elapsed);
 

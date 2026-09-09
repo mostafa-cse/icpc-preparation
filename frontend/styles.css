@@ -3587,16 +3587,23 @@
 
   .flame-title {
     font-family: 'Oswald', sans-serif;
-    font-size: 1.6rem;
+    font-size: 1.45rem;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    margin: 0 0 0.45rem;
+    margin: 0.25rem 0 1.25rem;
     background: linear-gradient(90deg, #fff3e0 0%, #ffb74d 30%, #ff7043 65%, #ffb74d 100%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     animation: flameTextShimmer 3s linear infinite;
+  }
+
+  @media (max-width: 580px) {
+    .flame-title {
+      font-size: 1.15rem;
+      letter-spacing: 0.05em;
+    }
   }
 
   @keyframes flameTextShimmer {

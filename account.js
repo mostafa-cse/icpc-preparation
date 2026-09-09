@@ -830,12 +830,14 @@
 
     // CALL 1 of 2: Profile & Authorization
     try {
-      const { data } = await sb.from("profiles")
-        .select("id, status, role, display_name, handle, avatar_emoji, created_at, cf_handle, atcoder_handle, vjudge_handle, cses_handle, leetcode_handle")
+      const { data, error } = await sb.from("profiles")
+        .select("*")
         .eq("id", user.id)
         .single();
+      if (error) console.error("Profile load error:", error);
       profile = data || null;
     } catch (e) {
+      console.error("Profile fetch exception:", e);
       profile = null;
     }
 

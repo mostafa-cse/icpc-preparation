@@ -33,7 +33,7 @@
   });
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=b9ab29e1">
+<link rel="stylesheet" href="styles.css?v=70773e50">
 <script src="theme.js?v=ddf538cb"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script src="supabase-config.js?v=57dadd8f"></script>
@@ -46,22 +46,27 @@
 <div id="appFlameLoader" class="flame-loader-overlay" aria-live="polite" aria-label="Loading ICPC Preparation workspace">
   <div class="flame-ambient-radiance" aria-hidden="true"></div>
   <div class="flame-loader-card">
-    <div class="flame-wrapper">
-      <div class="flame-glow-ground" aria-hidden="true"></div>
-      <div class="flame-base">
-        <div class="flame-tongue outer"></div>
-        <div class="flame-tongue mid"></div>
-        <div class="flame-tongue inner"></div>
-        <div class="flame-tongue blue-base"></div>
-        <div class="flame-code-mark">&lt;/&gt;</div>
-      </div>
-      <div class="flame-sparks" aria-hidden="true">
-        <span class="flame-spark" style="--dx: -18px; left: 42%; animation-delay: 0.1s;"></span>
-        <span class="flame-spark" style="--dx: 16px; left: 54%; animation-delay: 0.4s;"></span>
-        <span class="flame-spark" style="--dx: -9px; left: 48%; animation-delay: 0.75s;"></span>
-        <span class="flame-spark" style="--dx: 22px; left: 58%; animation-delay: 1.1s;"></span>
-        <span class="flame-spark" style="--dx: -22px; left: 38%; animation-delay: 1.4s;"></span>
-        <span class="flame-spark" style="--dx: 8px; left: 51%; animation-delay: 1.65s;"></span>
+    <div class="cp-coder-stage">
+      <div class="cp-coder"></div>
+      <div class="fireplace">
+        <div class="blur">
+          <div class="fireplace__flame_big"></div>
+        </div>
+        <section class="fireplace__log"></section>
+        <section class="fireplace__log"></section>
+        <section class="fireplace__log"></section>
+        <section class="fireplace__log"></section>
+        <section class="fireplace__log"></section>
+        <section class="fireplace__log"></section>
+        <section class="fireplace__log"></section>
+        <main class="fireplace__spark"></main>
+        <main class="fireplace__spark"></main>
+        <main class="fireplace__spark"></main>
+        <main class="fireplace__spark"></main>
+        <div class="blur fix">
+          <div class="fireplace__flame"></div>
+        </div>
+        <div class="fireplace__light"></div>
       </div>
     </div>
     <div class="flame-badge">ICPC FINAL SPRINT</div>
@@ -75,7 +80,7 @@
 <script>
 (function() {
   var startTime = Date.now();
-  var MIN_DISPLAY_MS = 1250;
+  var MIN_DISPLAY_MS = 2200;
   var dismissed = false;
 
   var tips = [
@@ -116,12 +121,12 @@
     }, delay);
   };
 
-  // Failsafe auto-dismiss after 2.8s max
+  // Failsafe auto-dismiss after 3.6s max
   setTimeout(function() {
     if (!dismissed && typeof window.dismissFlameLoader === "function") {
       window.dismissFlameLoader();
     }
-  }, 2800);
+  }, 3600);
 })();
 </script>
 

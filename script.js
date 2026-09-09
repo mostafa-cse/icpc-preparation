@@ -166,6 +166,9 @@
   const CACHE_KEY = "icpc_solved";
   const FLAG_KEY = "icpc_flagged";
   const DATES_KEY = "icpc_solve_dates";
+  const STATUS_KEY = "icpc_status"; // Map<id, "solved"|"in-progress"|"ignore"|"">
+  // Status cycle order
+  const STATUS_CYCLE = ["", "in-progress", "solved", "ignore"];
   let solved = new Set();
   // Problems to come back to. The plan tells you to "revisit everything you
   // flagged" and to practise against "your own flagged list from weeks 1-14",
@@ -173,9 +176,14 @@
   // revisiting are usually the ones you did solve, but only barely.
   let flagged = new Set();
   let solveDates = {};
+  // Extended status map: each problem can be "", "in-progress", "solved", or "ignore"
+  let statusMap = {};
   try { solved = new Set(JSON.parse(localStorage.getItem(CACHE_KEY) || "[]")); } catch (e) {}
   try { flagged = new Set(JSON.parse(localStorage.getItem(FLAG_KEY) || "[]")); } catch (e) {}
   try { solveDates = JSON.parse(localStorage.getItem(DATES_KEY) || "{}"); } catch (e) {}
+  try { statusMap = JSON.parse(localStorage.getItem(STATUS_KEY) || "{}"); } catch (e) {}
+  // Backfill statusMap from existing solved set on first load
+  solved.forEach(id => { if (!statusMap[id]) statusMap[id] = "solved"; });
 
   // Gracefully ensure any already-solved problems have a date assigned for the heatmap
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -210,10 +218,39 @@
       localStorage.setItem(CACHE_KEY, JSON.stringify([...solved]));
       localStorage.setItem(FLAG_KEY, JSON.stringify([...flagged]));
       localStorage.setItem(DATES_KEY, JSON.stringify(solveDates));
+      localStorage.setItem(STATUS_KEY, JSON.stringify(statusMap));
       isDirty = false;
     } catch (e) {
       console.error("Failed to batch save progress:", e);
     }
+  }
+
+  // ---------- Status helpers ----------
+  function getStatus(id) { return statusMap[id] || ""; }
+
+  function setStatus(id, status) {
+    const nowIso = new Date().toISOString().slice(0, 10);
+    // Keep solved Set in sync so heatmap/counters still work
+    if (status === "solved") {
+      solved.add(id);
+      if (!solveDates[id]) solveDates[id] = nowIso;
+    } else {
+      solved.delete(id);
+      if (status !== "solved") delete solveDates[id];
+    }
+    if (status === "") {
+      delete statusMap[id];
+    } else {
+      statusMap[id] = status;
+    }
+  }
+
+  function cycleStatus(id) {
+    const cur = getStatus(id);
+    const idx = STATUS_CYCLE.indexOf(cur);
+    const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+    setStatus(id, next);
+    return next;
   }
 
   function persistLocal(immediate = false) {
@@ -357,6 +394,7 @@
         const solvedEl = document.getElementById("phaseSolvedCount");
         const remainEl = document.getElementById("phaseRemainCount");
         const starredEl = document.getElementById("phaseStarredCount");
+
 
         if (totalEl) totalEl.textContent = t.toLocaleString();
         if (solvedEl) solvedEl.textContent = d.toLocaleString();
@@ -532,14 +570,28 @@
     closedFiles = new Set(FILES);
   }
 
+  // ---------- Status labels & chip class helper (module-scope) ----------
+  const STATUS_LABELS = { "": "Unsolved", "in-progress": "In Progress", "solved": "Solved", "ignore": "Ignore" };
+
+  function applyStatusClasses(c, status, isFlagged) {
+    c.classList.toggle("solved",      status === "solved");
+    c.classList.toggle("st-progress", status === "in-progress");
+    c.classList.toggle("st-ignore",   status === "ignore");
+    c.classList.toggle("flagged", isFlagged);
+    c.classList.toggle("starred", isFlagged);
+    const badge = c.querySelector(".status-badge");
+    if (badge) {
+      badge.dataset.status = status;
+      badge.title = STATUS_LABELS[status] || "Unsolved";
+    }
+  }
+
   function updateChipsForId(id) {
     const arr = chipRegistry.get(id);
     if (!arr) return;
-    const isSolved = solved.has(id), isFlagged = flagged.has(id);
+    const status = getStatus(id), isFlagged = flagged.has(id);
     arr.forEach(c => {
-      c.classList.toggle("solved", isSolved);
-      c.classList.toggle("flagged", isFlagged);
-      c.classList.toggle("starred", isFlagged);
+      applyStatusClasses(c, status, isFlagged);
       const starBtn = c.querySelector(".star-btn");
       if (starBtn) {
         starBtn.classList.toggle("active", isFlagged);
@@ -557,11 +609,9 @@
   }
   function refreshAllChipVisuals() {
     chipRegistry.forEach((elements, id) => {
-      const isSolved = solved.has(id), isFlagged = flagged.has(id);
+      const status = getStatus(id), isFlagged = flagged.has(id);
       elements.forEach(c => {
-        c.classList.toggle("solved", isSolved);
-        c.classList.toggle("flagged", isFlagged);
-        c.classList.toggle("starred", isFlagged);
+        applyStatusClasses(c, status, isFlagged);
         const starBtn = c.querySelector(".star-btn");
         if (starBtn) {
           starBtn.classList.toggle("active", isFlagged);
@@ -626,15 +676,20 @@
 
   function createChipElement(it) {
     const isStarred = flagged.has(it.id);
+    const status = getStatus(it.id); // "", "in-progress", "solved", "ignore"
     const chip = document.createElement("span");
-    chip.className = "chip" + (solved.has(it.id) ? " solved" : "") +
-      (isStarred ? " flagged starred" : "") + (it.deepCut ? " deep" : "") +
-      (it.difficulty === "Easy" || it.difficulty === "Very Easy" ? " diff-easy" : "") +
-      (it.difficulty === "Hard" || it.difficulty === "Very Hard" || it.difficulty === "Insane" ? " diff-hard" : "");
+    chip.className = "chip"
+      + (status === "solved"      ? " solved"      : "")
+      + (status === "in-progress" ? " st-progress"  : "")
+      + (status === "ignore"      ? " st-ignore"    : "")
+      + (isStarred ? " flagged starred" : "")
+      + (it.deepCut ? " deep" : "")
+      + (it.difficulty === "Easy" || it.difficulty === "Very Easy" ? " diff-easy" : "")
+      + (it.difficulty === "Hard" || it.difficulty === "Very Hard" || it.difficulty === "Insane" ? " diff-hard" : "");
     chip.dataset.id = it.id;
     if (it.note) chip.title = it.note;
     const label = it.kind === "link" ? (it.label || it.id) : displayId(it.id);
-    chip.innerHTML = `<button type="button" class="star-btn${isStarred ? ' active' : ''}" title="${isStarred ? 'Starred as important (click to unstar)' : 'Star as important'}" aria-label="${isStarred ? 'Starred as important (click to unstar)' : 'Star as important'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="${isStarred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></button><span class="lbl">${esc(label)}</span><a class="go" href="${esc(linkFor(it))}" target="_blank" rel="noopener noreferrer" title="Open problem">↗</a>`;
+    chip.innerHTML = `<button type="button" class="star-btn${isStarred ? ' active' : ''}" title="${isStarred ? 'Starred as important (click to unstar)' : 'Star as important'}" aria-label="${isStarred ? 'Starred as important (click to unstar)' : 'Star as important'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="${isStarred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></button><span class="lbl">${esc(label)}</span><button type="button" class="status-badge" data-status="${status}" title="${STATUS_LABELS[status] || 'Unsolved'}"></button><a class="go" href="${esc(linkFor(it))}" target="_blank" rel="noopener noreferrer" title="Open problem">↗</a>`;
     const starBtn = chip.querySelector(".star-btn");
     if (starBtn) {
       starBtn.addEventListener("click", e => {
@@ -643,23 +698,31 @@
         toggleFlag(it.id);
       });
     }
+    const statusBadge = chip.querySelector(".status-badge");
     const lbl = chip.querySelector(".lbl");
-    lbl.title = "Click to mark solved · Star to mark important";
-    lbl.addEventListener("click", e => {
+
+    // Left-click anywhere on chip (except star/go) → cycle status
+    function handleStatusCycle(e) {
       if (e.altKey) { toggleFlag(it.id); return; }
-      const nowIso = new Date().toISOString().slice(0, 10);
-      if (solved.has(it.id)) {
-        solved.delete(it.id);
-        delete solveDates[it.id];
-      } else {
-        solved.add(it.id);
-        solveDates[it.id] = nowIso;
-      }
+      e.stopPropagation();
+      cycleStatus(it.id);
       persist();
       updateChipsForId(it.id);
       refreshCounters();
-    });
+      // Trigger badge pop animation
+      const badge = chip.querySelector(".status-badge");
+      if (badge) {
+        badge.classList.remove("just-changed");
+        void badge.offsetWidth; // reflow to restart animation
+        badge.classList.add("just-changed");
+      }
+    }
+    lbl.addEventListener("click", handleStatusCycle);
+    statusBadge.addEventListener("click", handleStatusCycle);
+
+    // Right-click still stars
     lbl.addEventListener("contextmenu", e => { e.preventDefault(); toggleFlag(it.id); });
+    chip.addEventListener("contextmenu", e => { e.preventDefault(); toggleFlag(it.id); });
 
     if (!chipRegistry.has(it.id)) chipRegistry.set(it.id, []);
     chipRegistry.get(it.id).push(chip);
@@ -815,10 +878,8 @@
         actions.innerHTML = `<button type="button" data-act="all">Mark section solved</button><button type="button" data-act="none">Clear section</button>`;
         actions.querySelector('[data-act="all"]').addEventListener("click", () => {
           mountChipsForCard(card, false);
-          const nowIso = new Date().toISOString().slice(0, 10);
           items.forEach(it => {
-            solved.add(it.id);
-            if (!solveDates[it.id]) solveDates[it.id] = nowIso;
+            setStatus(it.id, "solved");
             updateChipsForId(it.id);
           });
           persist(); refreshCounters();
@@ -826,8 +887,7 @@
         actions.querySelector('[data-act="none"]').addEventListener("click", () => {
           mountChipsForCard(card, false);
           items.forEach(it => {
-            solved.delete(it.id);
-            delete solveDates[it.id];
+            setStatus(it.id, "");
             updateChipsForId(it.id);
           });
           persist(); refreshCounters();
@@ -907,7 +967,7 @@
       if (filters.file && sec._file !== filters.file) return;
       if (!sectionMatchesFilters(sec)) return;
       sec._items2.forEach(it => {
-        if (solved.has(it.id) || seen.has(it.id)) return;
+        if (solved.has(it.id) || statusMap[it.id] === "ignore" || seen.has(it.id)) return;
         if (filters.deepOnly && !it.deepCut) return;
         if (filters.flaggedOnly && !flagged.has(it.id)) return;
         if (filters.textLower) {
@@ -1167,7 +1227,7 @@
   const exportBtn = document.getElementById("exportBtn");
   if (exportBtn) {
     exportBtn.addEventListener("click", () => {
-      const payload = { exportedAt: new Date().toISOString(), solved: [...solved], startDate: localStorage.getItem("icpc_start_date") || null };
+      const payload = { exportedAt: new Date().toISOString(), solved: [...solved], statusMap: Object.assign({}, statusMap), startDate: localStorage.getItem("icpc_start_date") || null };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1188,6 +1248,8 @@
           const payload = JSON.parse(reader.result);
           if (Array.isArray(payload.solved)) {
             solved = new Set(payload.solved);
+            if (payload.statusMap && typeof payload.statusMap === "object") statusMap = payload.statusMap;
+            else { statusMap = {}; solved.forEach(id => { statusMap[id] = "solved"; }); }
             persist();
             if (payload.startDate) { localStorage.setItem("icpc_start_date", payload.startDate); startDateInput.value = payload.startDate; }
             refreshAllChipVisuals(); refreshCounters(); renderTodayStrip();
@@ -1201,7 +1263,7 @@
   const resetBtn = document.getElementById("resetBtn");
   if (resetBtn) {
     twoStepConfirm(resetBtn, "Reset all", "Click again to confirm", () => {
-      solved = new Set(); flagged = new Set(); persist(); refreshAllChipVisuals(); refreshCounters();
+      solved = new Set(); flagged = new Set(); statusMap = {}; persist(); refreshAllChipVisuals(); refreshCounters();
     });
   }
 
@@ -1469,6 +1531,7 @@
       const nowIso = new Date().toISOString().slice(0, 10);
       solved.forEach(id => {
         if (!solveDates[id]) solveDates[id] = nowIso;
+        if (!statusMap[id]) statusMap[id] = "solved";
       });
       persistLocal();
       refreshAllChipVisuals();
@@ -1476,7 +1539,7 @@
       document.dispatchEvent(new CustomEvent("icpc:progress_updated"));
     },
     clearLocal() {
-      solved = new Set();
+      solved = new Set(); statusMap = {};
       flagged = new Set();
       solveDates = {};
       try {
@@ -1525,6 +1588,9 @@
     solvedSet: () => solved,
     flaggedSet: () => flagged,
     solveDates: () => solveDates,
+    statusMap: () => statusMap,
+    getStatus,
+    setStatus,
     byPhaseIds: () => byPhaseIds,
     byFileIds: () => byFileIds,
     byFilePhaseIds: () => byFilePhaseIds,

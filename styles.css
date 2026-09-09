@@ -1287,15 +1287,99 @@
   .chip.diff-easy { border-left-color: var(--good); }
   .chip.diff-hard { border-left-color: var(--warn); }
   .chip.deep::after { content: '\2726'; font-size: 0.62rem; color: var(--warn); margin-left: 0.1rem; }
+
+  /* ── Status: Solved (green) ── */
   .chip.solved {
     background: var(--good-soft); border-color: var(--good); color: var(--good);
-    opacity: 0.85;
+    opacity: 0.88;
   }
   .chip.solved .lbl {
     text-decoration-color: currentColor;
-    opacity: 0.82;
+    opacity: 0.8;
   }
   .chip.solved:hover { opacity: 1; border-color: var(--good); }
+
+  /* ── Status: In Progress (yellow) ── */
+  .chip.st-progress {
+    background: color-mix(in srgb, var(--warn) 10%, var(--surface-2));
+    border-color: color-mix(in srgb, var(--warn) 55%, transparent);
+    border-left-color: var(--warn) !important;
+    color: var(--ink);
+  }
+  .chip.st-progress:hover {
+    border-color: var(--warn);
+    box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--warn) 30%, transparent);
+  }
+
+  /* ── Status: Ignore (red/muted) ── */
+  .chip.st-ignore {
+    background: color-mix(in srgb, var(--bad) 8%, var(--surface-2));
+    border-color: color-mix(in srgb, var(--bad) 40%, transparent);
+    border-left-color: var(--bad) !important;
+    color: var(--ink-faint);
+    opacity: 0.7;
+  }
+  .chip.st-ignore .lbl {
+    opacity: 0.65;
+    text-decoration-color: color-mix(in srgb, var(--bad) 50%, transparent);
+  }
+  .chip.st-ignore:hover { opacity: 0.9; border-color: var(--bad); }
+
+  /* ── Status Badge pill (shows current state, click to cycle) ── */
+  .chip .status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    touch-action: manipulation;
+    will-change: transform;
+    transform: translateZ(0);
+  }
+  .chip .status-badge:hover {
+    transform: scale(1.35) translateZ(0);
+    border-color: var(--accent);
+  }
+  /* Unsolved: empty circle */
+  .chip .status-badge[data-status=""] {
+    background: transparent;
+    border-color: var(--ink-faint);
+  }
+  /* In Progress: yellow filled */
+  .chip .status-badge[data-status="in-progress"] {
+    background: var(--warn);
+    border-color: var(--warn);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--warn) 25%, transparent);
+  }
+  /* Solved: green filled */
+  .chip .status-badge[data-status="solved"] {
+    background: var(--good);
+    border-color: var(--good);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--good) 25%, transparent);
+  }
+  /* Ignore: red filled */
+  .chip .status-badge[data-status="ignore"] {
+    background: var(--bad);
+    border-color: var(--bad);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--bad) 20%, transparent);
+  }
+  /* Animate badge on state change */
+  @keyframes badgePop {
+    0%   { transform: scale(0.6) translateZ(0); }
+    60%  { transform: scale(1.4) translateZ(0); }
+    100% { transform: scale(1)   translateZ(0); }
+  }
+  .chip .status-badge.just-changed {
+    animation: badgePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+  }
+
   .chip .go {
     text-decoration: none; color: inherit; opacity: 0.55; font-family: -apple-system, sans-serif; font-size: 0.72rem;
     padding-left: 0.1rem; border-left: 1px solid var(--line); margin-left: 0.15rem; padding-left: 0.35rem;

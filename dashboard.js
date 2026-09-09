@@ -395,7 +395,7 @@
             <span class="db-kpi-badge accent">Consistency</span>
           </div>
           <div class="db-kpi-main">
-            <span class="db-kpi-val">🔥 ${stats.currentStreak} <small>days</small></span>
+            <span class="db-kpi-val"><svg class="kpi-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>${stats.currentStreak} <small>days</small></span>
             <span class="db-kpi-sub">Best: ${stats.longestStreak}d · ${stats.totalActiveDays} active days</span>
           </div>
           <div class="db-kpi-streak-dots">
@@ -412,7 +412,7 @@
             </span>
           </div>
           <div class="db-kpi-main">
-            <span class="db-kpi-val">⚡ ${stats.todayCount} <small>/ ${stats.dailyGoal}</small></span>
+            <span class="db-kpi-val"><svg class="kpi-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>${stats.todayCount} <small>/ ${stats.dailyGoal}</small></span>
             <span class="db-kpi-sub">Target goal set in Settings</span>
           </div>
           <div class="bar db-kpi-bar"><i style="width:${Math.min(100, Math.round((100 * stats.todayCount) / Math.max(1, stats.dailyGoal)))}%;background:var(--accent)"></i></div>
@@ -425,7 +425,7 @@
             <span class="db-kpi-badge">${stats.plan.total}W Plan</span>
           </div>
           <div class="db-kpi-main">
-            <span class="db-kpi-val">🎯 ${stats.requiredDailyPace} <small>/ day</small></span>
+            <span class="db-kpi-val"><svg class="kpi-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>${stats.requiredDailyPace} <small>/ day</small></span>
             <span class="db-kpi-sub">to finish in ${stats.remainDays} days left</span>
           </div>
           <div class="db-kpi-note">Velocity: ~${stats.currentVelocity} solves/day</div>
@@ -485,7 +485,7 @@
             <span class="db-td-desc">${esc(p.desc)}</span>
           </td>
           <td class="db-td-dates">
-            <span class="db-date-pill">📅 ${fmtShort(s.startDate)} – ${fmtShort(s.endDate)}</span>
+            <span class="db-date-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:0.3rem" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>${fmtShort(s.startDate)} – ${fmtShort(s.endDate)}</span>
             <span class="db-weeks-pill">${s.weeks} wk (${s.weeks * 7}d)</span>
           </td>
           <td class="db-td-progress">
@@ -513,7 +513,7 @@
             <p class="db-section-sub">Scheduled start and end dates, progress, and problem loads for each of the 10 training blocks.</p>
           </div>
           <a href="#" data-goto-tab="settings" class="btn" style="font-size:0.8rem">
-            ⚙️ Pacing in Settings
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:0.3rem" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Pacing in Settings
           </a>
         </div>
 
@@ -575,21 +575,27 @@
           </div>
           <div class="db-directives-list">
             <div class="db-directive-item">
-              <span class="db-dir-icon">⏱️</span>
+              <span class="db-dir-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              </span>
               <div>
                 <strong>Strict Time-Boxing</strong>
                 <p>45m soft cap / 60m editorial cap during training blocks. Take the hint, write the solution, and flag for 48h repetition.</p>
               </div>
             </div>
             <div class="db-directive-item">
-              <span class="db-dir-icon">🔄</span>
+              <span class="db-dir-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              </span>
               <div>
                 <strong>Same-Day Upsolve</strong>
                 <p>Never sleep on an unsolved contest problem. The value drops by 80% if not resolved within 24 hours.</p>
               </div>
             </div>
             <div class="db-directive-item">
-              <span class="db-dir-icon">📝</span>
+              <span class="db-dir-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              </span>
               <div>
                 <strong>Error Log Discipline</strong>
                 <p>Record your failure mode for every missed problem: algorithm gap, implementation bug, or time trap.</p>
@@ -609,7 +615,7 @@
         <div class="db-header-actions">
           <a href="#" data-goto-tab="checklist" class="btn primary">Go to Checklist →</a>
           <a href="#" data-goto-tab="routine" class="btn">View Routine</a>
-          <a href="#" data-goto-tab="settings" class="btn">Settings ⚙️</a>
+          <a href="#" data-goto-tab="settings" class="btn">Settings</a>
         </div>
       </div>
 

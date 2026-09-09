@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ICPC Final Sprint — 16-Week Training Program</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏁</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230f172a'/%3E%3Cpath d='M8 11l5 5-5 5M15 21h9' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <script>
 // Prevent Navigator LockManager exclusive lock errors across tabs and background states
 (function() {
@@ -33,8 +33,8 @@
   });
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=0c208ad0">
-<script src="theme.js?v=8c68bc43"></script>
+<link rel="stylesheet" href="styles.css?v=db536309">
+<script src="theme.js?v=ddf538cb"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script src="supabase-config.js?v=f64f5749"></script>
 </head>
@@ -43,7 +43,9 @@
 <header class="topbar cp-topbar">
   <div class="cp-topbar-left">
     <a href="#" class="brand cp-brand" id="cpBrandLink" title="ICPC Preparation Training Program">
-      <span class="brand-mark">🏁</span>
+      <span class="brand-mark">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+      </span>
       <div class="cp-brand-text">
         <div class="cp-brand-title-row">
           <span class="cp-brand-name">ICPC <span class="cp-brand-accent">PREP</span></span>
@@ -71,10 +73,16 @@
   <div class="cp-hud-tools">
     <!-- Practice Timer HUD -->
     <div class="cp-timer-pill" id="cpTopTimer" title="Problem Practice Timer (45m hint, 60m hard cap)">
-      <span class="cp-timer-icon">⏱️</span>
+      <span class="cp-timer-icon">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      </span>
       <span class="cp-timer-face mono" id="cpTimerFace">00:00</span>
-      <button type="button" class="cp-timer-btn" id="cpTimerToggle" title="Start/Pause Timer (t)">▶</button>
-      <button type="button" class="cp-timer-btn" id="cpTimerReset" title="Reset Timer (T)">↺</button>
+      <button type="button" class="cp-timer-btn" id="cpTimerToggle" title="Start/Pause Timer (t)" aria-label="Toggle Practice Timer">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      </button>
+      <button type="button" class="cp-timer-btn" id="cpTimerReset" title="Reset Timer (T)" aria-label="Reset Practice Timer">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+      </button>
     </div>
 
     <!-- Active Phase Status & Popover Trigger -->
@@ -89,14 +97,16 @@
 
     <!-- Solved Counter Pill -->
     <div class="cp-solved-pill" id="cpSolvedPill" title="Problems solved in curriculum">
-      <span class="cp-check-icon">✓</span>
+      <span class="cp-check-icon">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </span>
       <span class="mono" id="cpSolvedNum">0</span>
       <span class="cp-solved-total mono">/ 5,089</span>
     </div>
 
     <!-- Zen / Focus Mode Toggle -->
     <button type="button" class="cp-tool-btn cp-zen-btn" id="cpZenBtn" title="Toggle Fullscreen Focus / Zen mode (z) - Hides topbar">
-      <span>🧘</span>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>
       <span class="cp-tool-label">Focus</span>
     </button>
 
@@ -106,7 +116,8 @@
 
 <!-- Floating Restore Button when Topbar is in Zen Mode -->
 <button type="button" class="zen-restore-btn" id="zenRestoreBtn" title="Exit Focus Mode (z or Esc)" aria-label="Exit Focus Mode">
-  <span>🧘</span> Exit Focus <kbd>z</kbd>
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>
+  <span>Exit Focus <kbd>z</kbd></span>
 </button>
 
 <div class="app">
@@ -394,7 +405,9 @@
     <div class="foot-grid">
       <div class="foot-brand">
         <div class="foot-mark-row">
-          <span class="brand-mark">🏁</span>
+          <span class="brand-mark">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          </span>
           <div>
             <p class="foot-name">ICPC · <span data-plan-weeks>16</span>-Week Plan</p>
             <p class="foot-tag">Final-sprint training program</p>
@@ -447,15 +460,15 @@
 
 <div id="printRoot" aria-hidden="true"></div>
 
-<script src="script.js?v=2d9ef917"></script>
+<script src="script.js?v=cbbdaec8"></script>
 <script src="prayer.js?v=06919d6a"></script>
-<script src="routine.js?v=ab597c13"></script>
-<script src="timer.js?v=dc2ed1df"></script>
+<script src="routine.js?v=3519941c"></script>
+<script src="timer.js?v=6bfcb00f"></script>
 <script src="templates.js?v=c2f46bc6"></script>
 <script src="contests.js?v=c5893920"></script>
-<script src="account.js?v=53fba0b0"></script>
-<script src="settings.js?v=3de1c8e4"></script>
-<script src="dashboard.js?v=27ea0e31"></script>
+<script src="account.js?v=b426149e"></script>
+<script src="settings.js?v=98a2cfc8"></script>
+<script src="dashboard.js?v=125a90bb"></script>
 <script src="admin.js?v=99c615d6"></script>
 </body>
 </html>

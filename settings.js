@@ -20,7 +20,8 @@
   const DEFAULT_PROFILE = {
     displayName: "",
     handle: "",
-    avatarEmoji: "🏁",
+    avatarBadge: "CP",
+    avatarEmoji: "CP",
     bio: "",
     institution: "",
     targetRating: "Specialist → Candidate Master",
@@ -115,7 +116,7 @@
     }
   ];
 
-  const EMOJI_PRESETS = ["🏁", "⚡", "💻", "🧠", "🏆", "🥋", "🚀", "🎯", "🔥", "☕", "🏹", "🛡️"];
+  const BADGE_PRESETS = ["CP", "ICPC", "CF", "AC", "IOI", "DEV", "PRO", "TOP"];
 
   let cfLiveInfo = null;
   let toastTimer = null;
@@ -129,6 +130,10 @@
   function readProfile() {
     try {
       const stored = JSON.parse(localStorage.getItem(PROFILE_STORE) || "{}");
+      const rawBadge = String(stored.avatarBadge || stored.avatarEmoji || "CP");
+      const cleanBadge = rawBadge.replace(/[\uD800-\uDFFF\u2600-\u27BF]/g, "").trim().toUpperCase().slice(0, 4) || "CP";
+      stored.avatarBadge = cleanBadge;
+      stored.avatarEmoji = cleanBadge;
       return Object.assign({}, DEFAULT_PROFILE, stored, {
         accounts: Object.assign({}, DEFAULT_PROFILE.accounts, stored.accounts || {})
       });
@@ -263,9 +268,9 @@
       const target = new Date(targetContestDate + "T00:00:00");
       const diffDays = Math.ceil((target - new Date(now.toDateString())) / 86400000);
       if (diffDays > 0) {
-        targetCountdownHtml = `<span class="st-tag target-countdown">🎯 ${diffDays} day${diffDays === 1 ? "" : "s"} until Target Contest</span>`;
+        targetCountdownHtml = `<span class="st-tag target-countdown">${diffDays} day${diffDays === 1 ? "" : "s"} until Target Contest</span>`;
       } else if (diffDays === 0) {
-        targetCountdownHtml = `<span class="st-tag target-countdown is-today">🏆 Contest is TODAY! Give it your all!</span>`;
+        targetCountdownHtml = `<span class="st-tag target-countdown is-today">Contest is TODAY! Give it your all!</span>`;
       } else {
         targetCountdownHtml = `<span class="st-tag target-countdown is-past">Contest completed (${-diffDays}d ago)</span>`;
       }
@@ -274,8 +279,8 @@
     // Days into sprint
     const sprintDays = Math.floor((new Date(new Date().toDateString()) - new Date(new Date(startDate + "T00:00:00").toDateString())) / 86400000);
     const sprintTagHtml = sprintDays >= 0
-      ? `<span class="st-tag">🏃 Day ${sprintDays + 1} of Sprint</span>`
-      : `<span class="st-tag">⏳ Starts in ${-sprintDays} days</span>`;
+      ? `<span class="st-tag">Day ${sprintDays + 1} of Sprint</span>`
+      : `<span class="st-tag">Starts in ${-sprintDays} days</span>`;
 
     // Codeforces badge preview
     let cfBadgeHtml = "";
@@ -347,14 +352,14 @@
 
     host.innerHTML = `
       <div class="st-header">
-        <div class="st-avatar-badge">${esc(profileData.avatarEmoji || "🏁")}</div>
+        <div class="st-avatar-badge">${esc(profileData.avatarBadge || "CP")}</div>
         <div class="st-header-info">
           <h2>${esc(profileData.displayName || "Program Settings")}</h2>
           <p class="st-header-sub">${esc(profileData.bio || "Personalize your training schedule, profile, competitive accounts & preferences.")}</p>
           <div class="st-header-tags">
-            <span class="st-tag">🎯 ${currentPlanWeeks}-Week Target</span>
-            <span class="st-tag">⚡ ${esc(activePreset.name)}</span>
-            <span class="st-tag">⏰ Day starts: ${esc(dayStartHHMM)}</span>
+            <span class="st-tag">${currentPlanWeeks}-Week Target</span>
+            <span class="st-tag">${esc(activePreset.name)}</span>
+            <span class="st-tag">Day starts: ${esc(dayStartHHMM)}</span>
             ${sprintTagHtml}
             ${targetCountdownHtml}
           </div>
@@ -365,10 +370,12 @@
       <section class="doc-section st-section">
         <div class="st-section-head">
           <div class="st-section-title">
-            <span class="st-section-icon">👤</span>
+            <span class="st-section-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </span>
             <div>
               <h3>Profile &amp; CP Accounts</h3>
-              <p>Configure your handle, avatar, bio, and link your competitive programming platform accounts.</p>
+              <p>Configure your handle, avatar monogram, bio, and link your competitive programming platform accounts.</p>
             </div>
           </div>
         </div>
@@ -384,11 +391,11 @@
           </div>
 
           <div class="st-field">
-            <label>Avatar Emoji</label>
+            <label>Avatar Monogram / Badge</label>
             <div class="st-emoji-row">
-              <input type="text" class="st-input st-emoji-input" id="stAvatarEmoji" maxlength="4" value="${esc(profileData.avatarEmoji || "🏁")}">
+              <input type="text" class="st-input st-emoji-input" id="stAvatarEmoji" maxlength="4" value="${esc(profileData.avatarBadge || "CP")}">
               <div class="st-emoji-chips">
-                ${EMOJI_PRESETS.map(e => `<button type="button" class="st-emoji-chip${e === profileData.avatarEmoji ? " is-active" : ""}" data-emoji="${esc(e)}">${esc(e)}</button>`).join("")}
+                ${BADGE_PRESETS.map(e => `<button type="button" class="st-emoji-chip${e === (profileData.avatarBadge || "CP") ? " is-active" : ""}" data-emoji="${esc(e)}">${esc(e)}</button>`).join("")}
               </div>
             </div>
           </div>
@@ -439,7 +446,9 @@
       <section class="doc-section st-section">
         <div class="st-section-head">
           <div class="st-section-title">
-            <span class="st-section-icon">📅</span>
+            <span class="st-section-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            </span>
             <div>
               <h3>Milestones &amp; Target Dates</h3>
               <p>Set when your program sprint started and your upcoming target competition countdown.</p>
@@ -479,7 +488,9 @@
       <section class="doc-section st-section">
         <div class="st-section-head">
           <div class="st-section-title">
-            <span class="st-section-icon">🥋</span>
+            <span class="st-section-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </span>
             <div>
               <h3>Training Strategy &amp; Routine Type</h3>
               <p>Choose your training strategy. The Routine schedule will adapt its study pools, targets, and breaks accordingly.</p>
@@ -500,7 +511,7 @@
             <span class="st-tag" style="background:var(--accent-soft);color:var(--accent-ink)">Active Target: ${currentPlanWeeks} Weeks</span>
           </div>
 
-          <div class="st-plan-options-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0.85rem;margin-top:0.85rem">
+          <div class="st-plan-selector" style="margin-top:0.85rem">
             <div class="st-plan-card${currentPlanWeeks === 16 ? " is-active" : ""}" data-plan-select="16">
               <div class="st-plan-card-head">
                 <span class="st-plan-badge">16 Weeks (4 Months)</span>
@@ -509,7 +520,7 @@
               <h5 style="margin:0.4rem 0 0.2rem;font-size:1.05rem">16-Week Final Sprint</h5>
               <p style="font-size:0.84rem;color:var(--ink-soft);margin-bottom:0.75rem">Aggressive daily pace for imminent contest season (~45 solves/day). 2 weeks for major core blocks.</p>
               <button type="button" class="btn st-plan-btn${currentPlanWeeks === 16 ? " primary" : ""}" data-weeks="16">
-                ${currentPlanWeeks === 16 ? "✓ Selected Target" : "Select 16-Week Target"}
+                ${currentPlanWeeks === 16 ? "Active Target" : "Select 16-Week Target"}
               </button>
             </div>
 
@@ -521,7 +532,7 @@
               <h5 style="margin:0.4rem 0 0.2rem;font-size:1.05rem">26-Week Extended Preparation</h5>
               <p style="font-size:0.84rem;color:var(--ink-soft);margin-bottom:0.75rem">Semester-long runway with comprehensive deep-dive time (~28 solves/day). 3 weeks for major core blocks.</p>
               <button type="button" class="btn st-plan-btn${currentPlanWeeks === 26 ? " primary" : ""}" data-weeks="26">
-                ${currentPlanWeeks === 26 ? "✓ Selected Target" : "Select 26-Week Target"}
+                ${currentPlanWeeks === 26 ? "Active Target" : "Select 26-Week Target"}
               </button>
             </div>
           </div>
@@ -532,7 +543,9 @@
       <section class="doc-section st-section" id="stSectionPassword">
         <div class="st-section-head">
           <div class="st-section-title">
-            <span class="st-section-icon">🔐</span>
+            <span class="st-section-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </span>
             <div>
               <h3>Password</h3>
               <p>Manage your account security and update your login password.</p>
@@ -588,7 +601,9 @@
       <section class="doc-section st-section" id="stSectionPreferences">
         <div class="st-section-head">
           <div class="st-section-title">
-            <span class="st-section-icon">⚙️</span>
+            <span class="st-section-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </span>
             <div>
               <h3>Preferences</h3>
               <p>Daily training schedule anchor, appearance theme, audio alerts, daily targets, and problem time caps.</p>
@@ -618,9 +633,9 @@
             <h4>Appearance &amp; Theme</h4>
             <p class="st-card-sub">Select your preferred color scheme across all views.</p>
             <div class="btn-row" style="margin-top:0.75rem">
-              <button type="button" class="btn st-theme-opt${currentTheme === "auto" ? " primary" : ""}" data-theme="auto">🌗 Auto (System)</button>
-              <button type="button" class="btn st-theme-opt${currentTheme === "light" ? " primary" : ""}" data-theme="light">☀️ Light</button>
-              <button type="button" class="btn st-theme-opt${currentTheme === "dark" ? " primary" : ""}" data-theme="dark">🌙 Dark</button>
+              <button type="button" class="btn st-theme-opt${currentTheme === "auto" ? " primary" : ""}" data-theme="auto"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:0.3rem" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 1 0 20z" fill="currentColor"></path></svg>System</button>
+              <button type="button" class="btn st-theme-opt${currentTheme === "light" ? " primary" : ""}" data-theme="light"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:0.3rem" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>Light</button>
+              <button type="button" class="btn st-theme-opt${currentTheme === "dark" ? " primary" : ""}" data-theme="dark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:0.3rem" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>Dark</button>
             </div>
           </div>
 
@@ -643,7 +658,7 @@
               <label class="chk-label" style="font-weight:600">
                 <input type="checkbox" id="stSoundToggle"${soundEnabled ? " checked" : ""}> Enable audio alerts
               </label>
-              <button type="button" class="btn" id="stTestSoundBtn" title="Test the completion chime">🔊 Test Sound</button>
+              <button type="button" class="btn" id="stTestSoundBtn" title="Test the completion chime"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:0.3rem" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>Test Sound</button>
             </div>
           </div>
 
@@ -667,7 +682,9 @@
       <section class="doc-section st-section" id="stSectionYourData">
         <div class="st-section-head">
           <div class="st-section-title">
-            <span class="st-section-icon">💾</span>
+            <span class="st-section-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            </span>
             <div>
               <h3>Your data</h3>
               <p>Progress is stored against your account, so signing in on another device brings it with you. Export or import your progress, full backups, or reset your data.</p>
@@ -728,7 +745,9 @@
         const current = readProfile();
         current.displayName = (document.getElementById("stDisplayName").value || "").trim();
         current.handle = (document.getElementById("stHandle").value || "").trim();
-        current.avatarEmoji = (document.getElementById("stAvatarEmoji").value || "🏁").trim();
+        const rawBadge = (document.getElementById("stAvatarEmoji").value || "CP").trim().toUpperCase();
+        current.avatarBadge = rawBadge.replace(/[\uD800-\uDFFF\u2600-\u27BF]/g, "").slice(0, 4) || "CP";
+        current.avatarEmoji = current.avatarBadge;
         current.bio = (document.getElementById("stBio").value || "").trim();
         current.institution = (document.getElementById("stInstitution").value || "").trim();
         current.targetRating = (document.getElementById("stTargetRating").value || "").trim();
@@ -943,9 +962,8 @@
         else document.documentElement.setAttribute("data-theme", theme);
         // update topbar theme button if present
         const topBtn = document.querySelector(".theme-btn");
-        if (topBtn) {
-          const icon = { auto: "🌗", light: "☀️", dark: "🌙" }[theme];
-          topBtn.textContent = icon;
+        if (topBtn && window.__THEME_ICONS) {
+          topBtn.innerHTML = window.__THEME_ICONS[theme] || "";
         }
         showToast(`Theme set to ${theme}.`);
         render();
@@ -974,7 +992,7 @@
     if (testSoundBtn) {
       testSoundBtn.addEventListener("click", () => {
         playNotificationChime();
-        showToast("Playing notification chime 🔊");
+        showToast("Playing notification chime");
       });
     }
 

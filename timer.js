@@ -76,7 +76,9 @@
     const topToggle = document.getElementById("cpTimerToggle");
     if (topFace) topFace.textContent = formatted;
     if (topToggle) {
-      topToggle.textContent = isRun ? "⏸" : "▶";
+      topToggle.innerHTML = isRun
+        ? '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>'
+        : '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
       topToggle.title = isRun ? "Pause Timer (t)" : "Start Timer (t)";
     }
     if (topTimer) {

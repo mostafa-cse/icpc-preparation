@@ -113,7 +113,7 @@
     el.innerHTML =
       '<div class="auth-card-wrap">' +
         '<form class="auth-card" id="authForm" autocomplete="on">' +
-          '<span class="lock-mark">🏁</span>' +
+          '<span class="lock-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></span>' +
           '<h1>ICPC · 16-Week Plan</h1>' +
           '<p class="auth-sub" id="authSub">Sign in to load your progress.</p>' +
           '<div class="auth-tabs">' +
@@ -263,7 +263,7 @@
     el.innerHTML =
       '<div class="auth-card-wrap">' +
         '<form class="auth-card" id="pwForm" autocomplete="on" novalidate>' +
-          '<span class="lock-mark">🔑</span>' +
+          '<span class="lock-mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"></circle><path d="m21 2-9.6 9.6"></path><path d="m15.5 7.5 3 3L22 7l-3-3"></path></svg></span>' +
           "<h1>Set a new password</h1>" +
           '<p class="auth-sub">You followed a reset link. Choose a new password to finish.</p>' +
           '<label class="auth-field">New password' +
@@ -359,22 +359,26 @@
     const state = accountState();
     const copy = {
       pending: {
-        mark: "⏳",
+        mark: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
         title: "Waiting for approval",
         body: "Your account has been created and is in the queue for review. " +
               "You will be able to sign in as soon as an admin approves it.",
       },
       declined: {
-        mark: "🚫",
+        mark: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>',
         title: "Account not approved",
         body: "An admin reviewed this account and did not approve it.",
       },
       banned: {
-        mark: "⛔",
+        mark: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>',
         title: "Account suspended",
         body: "Access to this site has been withdrawn for this account.",
       },
-    }[state] || { mark: "⏳", title: "Waiting for approval", body: "" };
+    }[state] || {
+      mark: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
+      title: "Waiting for approval",
+      body: ""
+    };
 
     removeGate();
     const el = document.createElement("div");
@@ -714,18 +718,18 @@
 
     host.innerHTML =
       '<div class="pf-head">' +
-        '<span class="pf-avatar">' + (avatarEmoji ? esc(avatarEmoji) : esc(who.name.slice(0, 1).toUpperCase())) + "</span>" +
+        '<span class="pf-avatar">' + (avatarEmoji && !avatarEmoji.match(/[\uD800-\uDFFF\u2600-\u27BF]/) ? esc(avatarEmoji) : esc(who.name.slice(0, 2).toUpperCase())) + "</span>" +
         '<div class="pf-id">' +
           "<h2>" + esc(who.name) + "</h2>" +
           (bio ? '<p class="pf-bio">' + esc(bio) + "</p>" : "") +
           '<p class="pf-email">' + esc(who.email) + "</p>" +
-          (targetRating ? '<p class="pf-target-badge">🎯 ' + esc(targetRating) + '</p>' : "") +
+          (targetRating ? '<p class="pf-target-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:0.3rem" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>' + esc(targetRating) + '</p>' : "") +
           (who.since ? '<p class="pf-since">Member since ' +
             esc(new Date(who.since).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })) +
             "</p>" : "") +
         "</div>" +
         '<div class="pf-head-actions">' +
-          '<button class="btn" id="pfSettingsBtn" type="button">⚙️ Settings</button>' +
+          '<button class="btn" id="pfSettingsBtn" type="button"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:0.3rem" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>Settings</button>' +
           (offline || !user ? "" : '<button class="btn danger" id="signOutBtn" type="button">Sign out</button>') +
         "</div>" +
       "</div>" +

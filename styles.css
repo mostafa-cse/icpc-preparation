@@ -104,7 +104,7 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; min-height: 100%; }
   html {
-    font-size: 18px; /* Medium baseline scale across entire website */
+    font-size: 14.5px; /* 90% zoom baseline scale for crisp, compact, professional UI */
     scroll-behavior: smooth;
   }
   body {
@@ -2004,8 +2004,9 @@
   .st-avatar-badge {
     width: 4rem; height: 4rem; border-radius: var(--r-md);
     background: var(--accent-soft); border: 2px solid var(--accent);
-    display: grid; place-items: center; font-size: 2.2rem; line-height: 1;
-    flex: 0 0 auto; box-shadow: var(--shadow-sm);
+    display: grid; place-items: center; font-size: 1.35rem; font-weight: 700;
+    font-family: 'Oswald', sans-serif; letter-spacing: 0.05em; color: var(--accent-ink);
+    line-height: 1; flex: 0 0 auto; box-shadow: var(--shadow-sm); text-transform: uppercase;
   }
   .st-header-info { flex: 1 1 16rem; min-width: 0; }
   .st-header-info h2 {
@@ -2033,10 +2034,11 @@
   .st-section-head { margin-bottom: 1.25rem; }
   .st-section-title { display: flex; align-items: flex-start; gap: 0.85rem; }
   .st-section-icon {
-    font-size: 1.6rem; width: 2.5rem; height: 2.5rem; border-radius: var(--r-sm);
+    width: 2.5rem; height: 2.5rem; border-radius: var(--r-sm);
     background: var(--surface-2); border: 1px solid var(--line); display: grid; place-items: center;
-    flex: 0 0 auto;
+    flex: 0 0 auto; color: var(--accent);
   }
+  .st-section-icon svg { width: 1.25rem; height: 1.25rem; }
   .st-section-title h3 {
     font-family: 'Oswald', sans-serif; font-size: 1.35rem; font-weight: 600;
     color: var(--ink); text-transform: uppercase; margin: 0;
@@ -2058,17 +2060,24 @@
     box-shadow: 0 0 0 3px var(--accent-glow);
   }
 
-  /* Emoji Picker */
+  /* Monogram & Badge Tag Picker */
   .st-emoji-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-  .st-emoji-input { width: 4.5rem; text-align: center; font-size: 1.5rem; padding: 0.35rem; flex: 0 0 auto; }
-  .st-emoji-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .st-emoji-input {
+    width: 5.5rem; text-align: center; font-size: 1rem; font-weight: 700;
+    font-family: 'Oswald', sans-serif; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.45rem 0.5rem; flex: 0 0 auto;
+  }
+  .st-emoji-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
   .st-emoji-chip {
     border: 1px solid var(--line); background: var(--surface-2); border-radius: var(--r-sm);
-    width: 2.4rem; height: 2.4rem; font-size: 1.25rem; display: grid; place-items: center;
-    cursor: pointer; transition: transform var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+    padding: 0.35rem 0.65rem; font-size: 0.78rem; font-weight: 700; font-family: 'Oswald', sans-serif;
+    letter-spacing: 0.06em; text-transform: uppercase; display: grid; place-items: center;
+    cursor: pointer; color: var(--ink); transition: transform var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
   }
-  .st-emoji-chip:hover { transform: scale(1.1); border-color: var(--accent); }
-  .st-emoji-chip.is-active { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent); }
+  .st-emoji-chip:hover { transform: translateY(-1px); border-color: var(--accent); color: var(--accent-ink); }
+  .st-emoji-chip.is-active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); box-shadow: 0 0 0 2px var(--accent); }
+
+  .kpi-icon { vertical-align: -2px; margin-right: 0.35rem; color: var(--accent); }
 
   /* Subcard for CP Accounts */
   .st-subcard {
